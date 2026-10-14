@@ -1,0 +1,117 @@
+# -*- coding: utf-8 -*-
+
+"""Utility functions."""
+
+import numpy as _np
+from numpy import conj, real, imag, log, sqrt, ones, zeros, empty
+
+rand = _np.random.random_sample
+randn = _np.random.standard_normal
+
+# Aliases/shortcuts for FFT routines assuming real-valued quantities in the
+# direct spaced.
+fftshift = _np.fft.fftshift
+ifftshift = _np.fft.ifftshift
+fft = _np.fft.fftn
+def ifft(x): return _np.real(_np.fft.ifftn(x))
+
+def abs2(x):
+    """Returns the squared absolute value of its argument."""
+    if _np.iscomplexobj(x):
+        x_re = x.real
+        x_im = x.imag
+        return x_re*x_re + x_im*x_im
+    else:
+        return x*x
+
+def normalize(psf):
+    s = sum(psf.ravel())
+    if s == 1.0: return psf
+    if s > 0.0: return (1.0/s)*psf
+    raise ValueError("PSF cannot be normalized: `sum(PSF) = {0}`".format(s))
+
+def zeropad(arr, shape):
+    """
+    Zero-pad array `arr` to given shape. The contents of `arr` is approximately
+    centered in the result.
+    """
+    rank = arr.ndim
+    if len(shape) != rank:
+        raise ValueError("bad number of dimensions")
+    diff = _np.asarray(shape) - _np.asarray(arr.shape)
+    if diff.min() < 0:
+        raise ValueError("output dimensions must be larger or equal input dimensions")
+    offset = diff//2
+    z = _np.zeros(shape, dtype=arr.dtype)
+    if rank == 1:
+        i0 = offset[0]; n0 = i0 + arr.shape[0]
+        z[i0:n0] = arr
+    elif rank == 2:
+        i0 = offset[0]; n0 = i0 + arr.shape[0]
+        i1 = offset[1]; n1 = i1 + arr.shape[1]
+        z[i0:n0,i1:n1] = arr
+    elif rank == 3:
+        i0 = offset[0]; n0 = i0 + arr.shape[0]
+        i1 = offset[1]; n1 = i1 + arr.shape[1]
+        i2 = offset[2]; n2 = i2 + arr.shape[2]
+        z[i0:n0,i1:n1,i2:n2] = arr
+    elif rank == 4:
+        i0 = offset[0]; n0 = i0 + arr.shape[0]
+        i1 = offset[1]; n1 = i1 + arr.shape[1]
+        i2 = offset[2]; n2 = i2 + arr.shape[2]
+        i3 = offset[3]; n3 = i3 + arr.shape[3]
+        z[i0:n0,i1:n1,i2:n2,i3:n3] = arr
+    elif rank == 5:
+        i0 = offset[0]; n0 = i0 + arr.shape[0]
+        i1 = offset[1]; n1 = i1 + arr.shape[1]
+        i2 = offset[2]; n2 = i2 + arr.shape[2]
+        i3 = offset[3]; n3 = i3 + arr.shape[3]
+        i4 = offset[4]; n4 = i4 + arr.shape[4]
+        z[i0:n0,i1:n1,i2:n2,i3:n3,i4:n4] = arr
+    elif rank == 6:
+        i0 = offset[0]; n0 = i0 + arr.shape[0]
+        i1 = offset[1]; n1 = i1 + arr.shape[1]
+        i2 = offset[2]; n2 = i2 + arr.shape[2]
+        i3 = offset[3]; n3 = i3 + arr.shape[3]
+        i4 = offset[4]; n4 = i4 + arr.shape[4]
+        i5 = offset[5]; n5 = i5 + arr.shape[5]
+        z[i0:n0,i1:n1,i2:n2,i3:n3,i4:n4,i5:n5] = arr
+    else:
+        raise ValueError("too many dimensions")
+    return z
+
+def DtD(x):
+    """
+    Return the result of D'⋅D⋅x where D is a (multi-dimensional) finite
+    difference operator and D' is its transpose.
+    """
+    dims = x.shape
+    r = _np.zeros(dims, dtype=x.dtype) # to store the result
+    rank = x.ndim # number of dimensions
+    if rank == 0: return r
+    if dims[0] >= 2:
+        dx = x[1:-1,...] - x[0:-2,...]
+        r[1:-1,...] += dx
+        r[0:-2,...] -= dx
+    if rank == 1: return r
+    if dims[1] >= 2:
+        dx = x[:,1:-1,...] - x[:,0:-2,...]
+        r[:,1:-1,...] += dx
+        r[:,0:-2,...] -= dx
+    if rank == 2: return r
+    if dims[2] >= 2:
+        dx = x[:,:,1:-1,...] - x[:,:,0:-2,...]
+        r[:,:,1:-1,...] += dx
+        r[:,:,0:-2,...] -= dx
+    if rank == 3: return r
+    if dims[3] >= 2:
+        dx = x[:,:,:,1:-1,...] - x[:,:,:,0:-2,...]
+        r[:,:,:,1:-1,...] += dx
+        r[:,:,:,0:-2,...] -= dx
+    if rank == 4: return r
+    if dims[4] >= 2:
+        dx = x[:,:,:,:,1:-1,...] - x[:,:,:,:,0:-2,...]
+        r[:,:,:,:,1:-1,...] += dx
+        r[:,:,:,:,0:-2,...] -= dx
+    if rank == 5: return r
+    raise ValueError("too many dimensions")
