@@ -3,7 +3,7 @@
 """Linear conjugate gradient."""
 
 from .utils import inner
-import numpy as _np
+import numpy as np
 import math
 
 def conjgrad(A, b, x=None, inplace=False, maxiter=50, gatol=0.0, grtol=1e-5,
@@ -38,11 +38,11 @@ def conjgrad(A, b, x=None, inplace=False, maxiter=50, gatol=0.0, grtol=1e-5,
 
     # Compute initial residuals.
     if x is None:
-        r = _np.copy(b)
-        x = _np.zeros(b.shape, dtype=b.dtype)
+        r = np.copy(b)
+        x = np.zeros(b.shape, dtype=b.dtype)
     else:
         if not inplace:
-            x = _np.copy(x)
+            x = np.copy(x)
         r = b - A(x)
     rho = inner(r, r)
     epsilon = max(gatol, grtol*math.sqrt(rho))

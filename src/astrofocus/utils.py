@@ -2,31 +2,31 @@
 
 """Utility functions."""
 
-import numpy as _np
+import numpy as np
 from numpy import conj, real, imag, log, sqrt, ones, zeros, empty
 
-rand = _np.random.random_sample
-randn = _np.random.standard_normal
+rand = np.random.random_sample
+randn = np.random.standard_normal
 
 # Aliases/shortcuts for FFT routines assuming real-valued quantities in the
 # direct spaced.
-fftshift = _np.fft.fftshift
-ifftshift = _np.fft.ifftshift
-fft = _np.fft.fftn
-def ifft(x): return _np.real(_np.fft.ifftn(x))
+fftshift = np.fft.fftshift
+ifftshift = np.fft.ifftshift
+fft = np.fft.fftn
+def ifft(x): return np.real(np.fft.ifftn(x))
 
 def abs2(x):
     """
     Returns the squared absolute value of `x`.
     """
-    if _np.iscomplexobj(x):
+    if np.iscomplexobj(x):
         x_re = x.real
         x_im = x.imag
         return x_re*x_re + x_im*x_im
     else:
         return x*x
 
-def normalize(arr, norm=_np.sum):
+def normalize(arr, norm=np.sum):
     """
     Return array `arr` divided by `norm(arr)`. By default, `norm` is `sum`. An
     exception is raised if `norm(arr) > 0` does not hold.
@@ -44,12 +44,12 @@ def zeropad(arr, shape):
     rank = arr.ndim
     if len(shape) != rank:
         raise ValueError('bad number of dimensions')
-    inp_shape = _np.asarray(arr.shape)
-    out_shape = _np.asarray(shape)
+    inp_shape = np.asarray(arr.shape)
+    out_shape = np.asarray(shape)
     if (out_shape < inp_shape).any():
         raise ValueError('output dimensions must be larger or equal input dimensions')
     offset = (out_shape // 2) - (inp_shape // 2)
-    z = _np.zeros(shape, dtype=arr.dtype)
+    z = np.zeros(shape, dtype=arr.dtype)
     if rank == 0:
         return z
     i0 = offset[0]
