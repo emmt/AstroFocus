@@ -16,7 +16,9 @@ fft = _np.fft.fftn
 def ifft(x): return _np.real(_np.fft.ifftn(x))
 
 def abs2(x):
-    """Returns the squared absolute value of its argument."""
+    """
+    Returns the squared absolute value of `x`.
+    """
     if _np.iscomplexobj(x):
         x_re = x.real
         x_im = x.imag
@@ -24,11 +26,15 @@ def abs2(x):
     else:
         return x*x
 
-def normalize(psf):
-    s = sum(psf.ravel())
-    if s == 1.0: return psf
-    if s > 0.0: return (1.0/s)*psf
-    raise ValueError('PSF cannot be normalized: `sum(PSF) = {0}`'.format(s))
+def normalize(arr, norm=_np.sum):
+    """
+    Return array `arr` divided by `norm(arr)`. By default, `norm` is `sum`. An
+    exception is raised if `norm(arr) > 0` does not hold.
+    """
+    nrm = norm(arr.ravel())
+    if nrm == 1: return arr
+    if nrm > 0: return (1/nrm)*arr
+    raise ValueError('argument cannot be normalized: `norm(arr) = {0}`'.format(nrm))
 
 def zeropad(arr, shape):
     """
