@@ -28,58 +28,55 @@ def normalize(psf):
     s = sum(psf.ravel())
     if s == 1.0: return psf
     if s > 0.0: return (1.0/s)*psf
-    raise ValueError("PSF cannot be normalized: `sum(PSF) = {0}`".format(s))
+    raise ValueError('PSF cannot be normalized: `sum(PSF) = {0}`'.format(s))
 
 def zeropad(arr, shape):
     """
-    Zero-pad array `arr` to given shape. The contents of `arr` is approximately
-    centered in the result.
+    Zero-pad array `arr` to given `shape`. The contents of `arr` is centered in
+    the result according to the conventions used in `fftshift`.
     """
     rank = arr.ndim
     if len(shape) != rank:
-        raise ValueError("bad number of dimensions")
+        raise ValueError('bad number of dimensions')
     inp_shape = _np.asarray(arr.shape)
     out_shape = _np.asarray(shape)
     if (out_shape < inp_shape).any():
-        raise ValueError("output dimensions must be larger or equal input dimensions")
+        raise ValueError('output dimensions must be larger or equal input dimensions')
     offset = (out_shape // 2) - (inp_shape // 2)
     z = _np.zeros(shape, dtype=arr.dtype)
+    if rank == 0:
+        return z
+    i0 = offset[0]
+    j0 = i0 + inp_shape[0]
     if rank == 1:
-        i0 = offset[0]; n0 = i0 + inp_shape[0]
-        z[i0:n0] = arr
-    elif rank == 2:
-        i0 = offset[0]; n0 = i0 + inp_shape[0]
-        i1 = offset[1]; n1 = i1 + inp_shape[1]
-        z[i0:n0,i1:n1] = arr
-    elif rank == 3:
-        i0 = offset[0]; n0 = i0 + inp_shape[0]
-        i1 = offset[1]; n1 = i1 + inp_shape[1]
-        i2 = offset[2]; n2 = i2 + inp_shape[2]
-        z[i0:n0,i1:n1,i2:n2] = arr
-    elif rank == 4:
-        i0 = offset[0]; n0 = i0 + inp_shape[0]
-        i1 = offset[1]; n1 = i1 + inp_shape[1]
-        i2 = offset[2]; n2 = i2 + inp_shape[2]
-        i3 = offset[3]; n3 = i3 + inp_shape[3]
-        z[i0:n0,i1:n1,i2:n2,i3:n3] = arr
-    elif rank == 5:
-        i0 = offset[0]; n0 = i0 + inp_shape[0]
-        i1 = offset[1]; n1 = i1 + inp_shape[1]
-        i2 = offset[2]; n2 = i2 + inp_shape[2]
-        i3 = offset[3]; n3 = i3 + inp_shape[3]
-        i4 = offset[4]; n4 = i4 + inp_shape[4]
-        z[i0:n0,i1:n1,i2:n2,i3:n3,i4:n4] = arr
-    elif rank == 6:
-        i0 = offset[0]; n0 = i0 + inp_shape[0]
-        i1 = offset[1]; n1 = i1 + inp_shape[1]
-        i2 = offset[2]; n2 = i2 + inp_shape[2]
-        i3 = offset[3]; n3 = i3 + inp_shape[3]
-        i4 = offset[4]; n4 = i4 + inp_shape[4]
-        i5 = offset[5]; n5 = i5 + inp_shape[5]
-        z[i0:n0,i1:n1,i2:n2,i3:n3,i4:n4,i5:n5] = arr
-    else:
-        raise ValueError("too many dimensions")
-    return z
+        z[i0:j0] = arr
+        return z
+    i1 = offset[1]
+    j1 = i1 + inp_shape[1]
+    if rank == 2:
+        z[i0:j0,i1:j1] = arr
+        return z
+    i2 = offset[2]
+    j2 = i2 + inp_shape[2]
+    if rank == 3:
+        z[i0:j0,i1:j1,i2:j2] = arr
+        return z
+    i3 = offset[3]
+    j3 = i3 + inp_shape[3]
+    if rank == 4:
+        z[i0:j0,i1:j1,i2:j2,i3:j3] = arr
+        return z
+    i4 = offset[4]
+    j4 = i4 + inp_shape[4]
+    if rank == 5:
+        z[i0:j0,i1:j1,i2:j2,i3:j3,i4:j4] = arr
+        return z
+    i5 = offset[5]
+    j5 = i5 + inp_shape[5]
+    if rank == 6:
+        z[i0:j0,i1:j1,i2:j2,i3:j3,i4:j4,i5:j5] = arr
+        return z
+    raise ValueError('too many dimensions')
 
 def DtD(x):
     """
