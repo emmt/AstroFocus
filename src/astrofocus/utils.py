@@ -38,43 +38,44 @@ def zeropad(arr, shape):
     rank = arr.ndim
     if len(shape) != rank:
         raise ValueError("bad number of dimensions")
-    diff = _np.asarray(shape) - _np.asarray(arr.shape)
-    if diff.min() < 0:
+    inp_shape = _np.asarray(arr.shape)
+    out_shape = _np.asarray(shape)
+    if (out_shape < inp_shape).any():
         raise ValueError("output dimensions must be larger or equal input dimensions")
-    offset = diff//2
+    offset = (out_shape // 2) - (inp_shape // 2)
     z = _np.zeros(shape, dtype=arr.dtype)
     if rank == 1:
-        i0 = offset[0]; n0 = i0 + arr.shape[0]
+        i0 = offset[0]; n0 = i0 + inp_shape[0]
         z[i0:n0] = arr
     elif rank == 2:
-        i0 = offset[0]; n0 = i0 + arr.shape[0]
-        i1 = offset[1]; n1 = i1 + arr.shape[1]
+        i0 = offset[0]; n0 = i0 + inp_shape[0]
+        i1 = offset[1]; n1 = i1 + inp_shape[1]
         z[i0:n0,i1:n1] = arr
     elif rank == 3:
-        i0 = offset[0]; n0 = i0 + arr.shape[0]
-        i1 = offset[1]; n1 = i1 + arr.shape[1]
-        i2 = offset[2]; n2 = i2 + arr.shape[2]
+        i0 = offset[0]; n0 = i0 + inp_shape[0]
+        i1 = offset[1]; n1 = i1 + inp_shape[1]
+        i2 = offset[2]; n2 = i2 + inp_shape[2]
         z[i0:n0,i1:n1,i2:n2] = arr
     elif rank == 4:
-        i0 = offset[0]; n0 = i0 + arr.shape[0]
-        i1 = offset[1]; n1 = i1 + arr.shape[1]
-        i2 = offset[2]; n2 = i2 + arr.shape[2]
-        i3 = offset[3]; n3 = i3 + arr.shape[3]
+        i0 = offset[0]; n0 = i0 + inp_shape[0]
+        i1 = offset[1]; n1 = i1 + inp_shape[1]
+        i2 = offset[2]; n2 = i2 + inp_shape[2]
+        i3 = offset[3]; n3 = i3 + inp_shape[3]
         z[i0:n0,i1:n1,i2:n2,i3:n3] = arr
     elif rank == 5:
-        i0 = offset[0]; n0 = i0 + arr.shape[0]
-        i1 = offset[1]; n1 = i1 + arr.shape[1]
-        i2 = offset[2]; n2 = i2 + arr.shape[2]
-        i3 = offset[3]; n3 = i3 + arr.shape[3]
-        i4 = offset[4]; n4 = i4 + arr.shape[4]
+        i0 = offset[0]; n0 = i0 + inp_shape[0]
+        i1 = offset[1]; n1 = i1 + inp_shape[1]
+        i2 = offset[2]; n2 = i2 + inp_shape[2]
+        i3 = offset[3]; n3 = i3 + inp_shape[3]
+        i4 = offset[4]; n4 = i4 + inp_shape[4]
         z[i0:n0,i1:n1,i2:n2,i3:n3,i4:n4] = arr
     elif rank == 6:
-        i0 = offset[0]; n0 = i0 + arr.shape[0]
-        i1 = offset[1]; n1 = i1 + arr.shape[1]
-        i2 = offset[2]; n2 = i2 + arr.shape[2]
-        i3 = offset[3]; n3 = i3 + arr.shape[3]
-        i4 = offset[4]; n4 = i4 + arr.shape[4]
-        i5 = offset[5]; n5 = i5 + arr.shape[5]
+        i0 = offset[0]; n0 = i0 + inp_shape[0]
+        i1 = offset[1]; n1 = i1 + inp_shape[1]
+        i2 = offset[2]; n2 = i2 + inp_shape[2]
+        i3 = offset[3]; n3 = i3 + inp_shape[3]
+        i4 = offset[4]; n4 = i4 + inp_shape[4]
+        i5 = offset[5]; n5 = i5 + inp_shape[5]
         z[i0:n0,i1:n1,i2:n2,i3:n3,i4:n4,i5:n5] = arr
     else:
         raise ValueError("too many dimensions")
