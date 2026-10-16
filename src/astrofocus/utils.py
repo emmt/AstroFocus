@@ -87,32 +87,32 @@ def DtD(x):
     difference operator and D' is its transpose.
     """
     dims = x.shape
-    r = _np.zeros(dims, dtype=x.dtype) # to store the result
+    y = np.zeros(dims, dtype=x.dtype) # to store the result
     rank = x.ndim # number of dimensions
-    if rank == 0: return r
+    if rank == 0: return y
     if dims[0] >= 2:
-        dx = x[1:-1,...] - x[0:-2,...]
-        r[1:-1,...] += dx
-        r[0:-2,...] -= dx
-    if rank == 1: return r
+        d = x[1:,...] - x[0:-1,...]
+        y[1:,...] += d
+        y[0:-1,...] -= d
+    if rank == 1: return y
     if dims[1] >= 2:
-        dx = x[:,1:-1,...] - x[:,0:-2,...]
-        r[:,1:-1,...] += dx
-        r[:,0:-2,...] -= dx
-    if rank == 2: return r
+        d = x[:,1:,...] - x[:,0:-1,...]
+        y[:,1:,...] += d
+        y[:,0:-1,...] -= d
+    if rank == 2: return y
     if dims[2] >= 2:
-        dx = x[:,:,1:-1,...] - x[:,:,0:-2,...]
-        r[:,:,1:-1,...] += dx
-        r[:,:,0:-2,...] -= dx
-    if rank == 3: return r
+        d = x[:,:,1:,...] - x[:,:,0:-1,...]
+        y[:,:,1:,...] += d
+        y[:,:,0:-1,...] -= d
+    if rank == 3: return y
     if dims[3] >= 2:
-        dx = x[:,:,:,1:-1,...] - x[:,:,:,0:-2,...]
-        r[:,:,:,1:-1,...] += dx
-        r[:,:,:,0:-2,...] -= dx
-    if rank == 4: return r
+        d = x[:,:,:,1:,...] - x[:,:,:,0:-1,...]
+        y[:,:,:,1:,...] += d
+        y[:,:,:,0:-1,...] -= d
+    if rank == 4: return y
     if dims[4] >= 2:
-        dx = x[:,:,:,:,1:-1,...] - x[:,:,:,:,0:-2,...]
-        r[:,:,:,:,1:-1,...] += dx
-        r[:,:,:,:,0:-2,...] -= dx
-    if rank == 5: return r
-    raise ValueError("too many dimensions")
+        d = x[:,:,:,:,1:,...] - x[:,:,:,:,0:-1,...]
+        y[:,:,:,:,1:,...] += d
+        y[:,:,:,:,0:-1,...] -= d
+    if rank == 5: return y
+    raise ValueError('too many dimensions')
