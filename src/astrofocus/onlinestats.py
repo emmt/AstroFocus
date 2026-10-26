@@ -128,12 +128,23 @@ class SampleStatistics:
 
     def writeto(self, filename):
         """Write sample statistics to a FITS file."""
-        data = np.empty((3,) + self._avg.shape, self._avg.dtype)
-        data[0,...] = self._cnt
-        data[1,...] = self._avg
-        data[2,...] = self._var
         hdr = fits.Header()
         hdr['HDUNAME'] = ('SAMPLE_STATISTICS', 'This HDU contains sample statistics')
+        if np.isscalar(self._cnt):
+            nobs = self._cnt
+        elif np.all(self._cnt == self._cnt.ravel()[0]):
+            nobs = self._cnt.ravel()[0]
+        else:
+            nobs = None
+        data = np.empty((nobs is None and 3 or 2,) + self._avg.shape, self._avg.dtype)
+        if nobs is None:
+            data[0, ...] = self._cnt
+            offset = 1
+        else:
+            hdr['NOBS'] = (nobs, 'Number of observations')
+            offset = 0
+        data[offset + 0, ...] = self._avg
+        data[offset + 1, ...] = self._var
         hdu = fits.PrimaryHDU(data=data, header=hdr)
         hdu.writeto(filename)
         return None
@@ -153,13 +164,22 @@ class SampleStatistics:
                     continue
                 data = hdu.data
                 shape = data.shape
-                if shape[0] != 3:
-                    raise Exception('Expecting NAXIS1=3, got NAXIS1={0}'.format(shape[-1]))
-                cnt = data[0,...].astype('int')
-                cnt0 = cnt.ravel()[0]
-                self._cnt = (cnt == cnt0).all() and cnt0 or cnt
-                self._avg = data[1,...]
-                self._var = data[2,...]
+                if 'NOBS' not in hdr:
+                    # Non-uniform number of observations.
+                    if shape[0] != 3:
+                        raise Exception('Expecting NAXIS1=3, got NAXIS1={0}'.format(shape[-1]))
+                    cnt = data[0,...].astype('int')
+                    cnt0 = cnt.ravel()[0]
+                    self._cnt = (cnt == cnt0).all() and cnt0 or cnt
+                    offset = 1
+                else:
+                    # Uniform number of observations.
+                    if shape[0] != 2:
+                        raise Exception('Expecting NAXIS1=2, got NAXIS1={0}'.format(shape[-1]))
+                    self._cnt = int(hdr['NOBS'])
+                    offset = 0
+                self._avg = data[offset + 0,...]
+                self._var = data[offset + 1,...]
                 found = True
                 break
         if not found:
