@@ -3,6 +3,7 @@
 """Implement online sample statistics."""
 
 import astropy.io.fits as fits
+import copy
 import numpy as np
 
 # TODO merge 2 sample statistics
@@ -26,18 +27,20 @@ class SampleStatistics:
         if filename is not None:
             self.readfrom(filename)
 
-    def _clone(self, op=copy):
+    def __copy__(self):
         other = SampleStatistics()
-        other._cnt = op(self._cnt)
-        other._avg = op(self._avg)
-        other._var = op(self._var)
+        other._cnt = copy.copy(self._cnt)
+        other._avg = copy.copy(self._avg)
+        other._var = copy.copy(self._var)
         return other
 
-    def __copy__(self):
-        return _clone(self, copy)
+    def __deepcopy__(self, memo):
+        other = SampleStatistics()
+        other._cnt = copy.deepcopy(self._cnt, memo)
+        other._avg = copy.deepcopy(self._avg, memo)
+        other._var = copy.deepcopy(self._var, memo)
+        return other
 
-    def __deepcopy__(self):
-        return _clone(self, deepcopy)
 
     def count(self):
         """Return the number of observations accumulated in `self`."""
