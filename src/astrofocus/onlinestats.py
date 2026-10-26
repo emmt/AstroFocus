@@ -41,6 +41,12 @@ class SampleStatistics:
         other._var = copy.deepcopy(self._var, memo)
         return other
 
+    def __eq__(self, other):
+        # TODO Deal with NaNs and missing samples.
+        return (other is self) or (isinstance(other, SampleStatistics) and
+                                   np.all(other._cnt == self._cnt) and
+                                   np.all(other._avg == self._avg) and
+                                   np.all(other._var == self._var))
 
     def count(self):
         """Return the number of observations accumulated in `self`."""
