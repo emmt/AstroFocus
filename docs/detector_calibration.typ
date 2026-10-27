@@ -479,22 +479,6 @@ $
   u_n &= 1/(n + 1) thin (y_(n+1) - hat(m)_(n)) \
 $
 
-== Online statistics references
-
-Updating formulae for computing the sample mean and central moments of independent observations have been developed by many authors:
-
-- B. P. Welford, 1962, "Note on a Method for Calculating Corrected Sums of Squares and Products", Technometrics 4, pp. 419-420, Taylor & Francis.
-- West
-- Chan et al.
-- Pébay
-
-== Exercices
-
-+ Is it possible that the sample variance computed by recursion has some negative values? Consider that numerical operations in floating-point have limited precision and are subject to (small) rounding errors.
-+ Write a code sample that update the sample mean and sample variance for each new image.
-+ What are the most relevant quantities to memorize in order to reduce the number of operations? How does inline statistics code based on recurrence formulae compares to the simple 2-pass method in terms of number of operations?
-+ Improve the code to take into account a mask that indicates the bad (or the good at your choice) pixels in each given image. The mask may be different for each image.
-
 == Online statistics code
 
 ```python
@@ -542,6 +526,24 @@ and, later, recover the sample statistics by:
 stat = focus.SampleStatistics('data/bias-stat.fits.gz')
 ```
 
+== Exercices
+
++ Is it possible that the sample variance computed by recursion has some
+  negative values? Consider that numerical operations in floating-point have
+  limited precision and are subject to (small) rounding errors.
+
++ Write a code sample that update the sample mean and sample variance for each
+  new image.
+
++ What are the most relevant quantities to memorize in order to reduce the
+  number of operations? How does inline statistics code based on recurrence
+  formulae compares to the simple 2-pass method in terms of number of
+  operations?
+
++ Improve the code to take into account a mask that indicates the bad (or the
+  good at your choice) pixels in each given image. The mask may be different
+  for each image.
+
 == Unbiased variance
 
 The sample variance is a biased estimator of the variance:
@@ -557,6 +559,25 @@ With `AstroFocus`, the unbiased variance of an instance of `foxcus.SampleStatist
 ```python
 var = stat.var(corrected=True) # get unbiased estimator of the variance
 ```
+
+== Online statistics references
+
+Updating formulae for computing the sample mean and central moments of
+independent observations have many applications and have been studied and
+developed by many authors:
+
+#[#set text(0.8em);
+- B. P. Welford, 1962, _"Note on a Method for Calculating Corrected Sums of Squares and Products"_, Technometrics *4*, pp. 419-420
+  (https://amstat.tandfonline.com/doi/abs/10.1080/00401706.1962.10490022)
+
+  An early publication of the recurrence formulae for the sample mean and (unbiased) variance.
+
+- West
+
+- Chan et al.
+
+- Pébay
+]
 
 == Code
 
