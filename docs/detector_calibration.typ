@@ -579,9 +579,36 @@ var = stat.var(corrected=True) # get unbiased estimator of the variance
 ```
 ]
 
+== Online statistics: alternate formulation
+
+#[#set text(0.9em)
+
+Originally Welford (1962) proposed to update the sample mean $hat(m)_n$ and the
+    sum of squared residuals:
+
+$
+  hat(q)_(n) = sum_(k=1)^(n) (y_k - hat(m)_n)^2
+$
+
+by the following recurrence rules (with $r_(n) = y_(n+1) - hat(m)_n$):
+$
+    hat(m)_(n+1) &= hat(m)_n + r_n/(n + 1) \
+    hat(q)_(n+1) &= hat(q)_n + r_n thin (y_(n+1) - hat(m)_(n + 1))
+    = hat(q)_n + n/(n + 1) thin r_(n)^2 \
+$
+
++ How to initialize the recurrence?
+
++ Prove these rules and, hence, that $hat(v)_(n)= frac(hat(q)_n, n, style:
+  "horizontal")$ and $hat(s)_(n)= frac(hat(q)_n, (n - 1), style:
+  "horizontal")$ hold.
+
++ Is there any advantages or drawbacks to this approach?
+]
+
 == Online statistics references
 
-#[#set text(0.8em);
+#[#set text(0.8em)
 
 Updating formulae for computing the sample mean and central moments of
 independent observations have many applications and have been studied and
