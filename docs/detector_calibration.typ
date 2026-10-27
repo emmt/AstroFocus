@@ -65,7 +65,7 @@ import astrofocus as focus # for useful functions
 ...
 ```
 
-In the examples, the two first lines will be omitted (just as if `AstroFocus` was a normal package).
+In the following examples, the two first lines will be omitted (just as if `AstroFocus` was a normal package).
 
 = Task 1: Detector calibration
 
@@ -76,14 +76,14 @@ $
   p = cal(P)((q thin r + c) thin Delta t)
 $
 - $cal(P)(mu)$ denotes the realization of a Poisson process of mean $mu$,
-- $q$ is the quantum efficiency (QE),
-- $r$ is the irradiance (in photons per unit of time),
-- $c$ is the dark current (in electrons par unit of time),
-- $Delta t$ is the exposure time.
+- $q$ is the *quantum efficiency* (QE),
+- $r$ is the *irradiance* (in photons per unit of time),
+- $c$ is the *dark current* (in electrons par unit of time),
+- $Delta t$ is the *exposure time*.
 
 There are two different physical processes:
-- photo-electric effect with $q thin r thin Delta t$ the mean number of resulting photo-electrons,
-- dark current with $c thin Delta t$ the mean number of resulting electrons.
+- *photoelectric effect* with $q thin r thin Delta t$ the mean number of resulting photo-electrons,
+- *dark current* with $c thin Delta t$ the mean number of resulting electrons.
 
 == Output signal
 
@@ -111,7 +111,7 @@ $
 - $x$ is the _signal of interest_, which can be anything proportional to the irradiance $r$, here we assume that $x = (frac(a thin q, g, style: "horizontal")) thin r$,
 - $d = frac(c, g, style: "horizontal")$ is the contribution of the dark current in ADU per unit of time.
 
-Remark: unmixing the effects of $q$ and $g$ require an absolute calibration source (usually not available on sky), this is why we introduced $x$ (and thus $a$).
+Remark: unmixing the effects of $q$ and $g$ would require an absolute calibration source (usually not available on sky), this is why we introduced $x$ (and thus $a$).
 
 == Affine correction
 
@@ -165,10 +165,10 @@ $
   &≈ (a/(Delta t))^2 thin ((y - b)_(+)/g + sigma_("ron")^2)\
 $
 with 5 detector parameters to calibrate:
-- $g$ and $b$ the *gain* and *bias* of the DAC (in e$""^-$/ADU and ADU),
-- $d$ the *dark current* (in ADU per unit of time),
-- $a$ a *conversion factor* (in units of $x$ per ADU),
-- $sigma_("ron")$ the standard deviation of the read-out + quantization noises (in ADU).
+- $g$ and $b$ are the *gain* and *bias* of the DAC (in e$""^-$/ADU and ADU),
+- $d$ is the *dark current* (in ADU per unit of time),
+- $a$ is a *conversion factor* (in units of $x$ per ADU),
+- $sigma_("ron")$ is the standard deviation of the read-out + quantization noises (in ADU).
 
 == Bias images
 
@@ -217,16 +217,15 @@ $
     &= (u thin Delta t)/(hat("Avg")(y^("flat")) - hat(d) thin Delta t - hat(b))
 $
 
-If $u$ is unknown (e.g., because a calibrated source is not available), assuming $u = 1$ amounts to having $x$ expressed in units of the (unknown) flat field irradiance.
-
-
 == Remarks
 
-- If dark images have been acquired with different exposure times, $d$ can be estimated by fitting the model. What does it means?
++ If $u$, the flat field irradiance, is unknown (e.g., because a calibrated source is not available), assuming $u = 1$ amounts to having $x$ expressed in units of the (unknown) flat field irradiance.
 
-- What are the best weights for fitting the calibration data?
++ If dark images have been acquired with different exposure times, $d$ can be estimated by fitting the model. What does it means?
 
-- In the calibration process, the building blocks are the (pixel-wise) *sample mean* and *sample variance*. We will develop the software to estimate these quantities in the following.
++ What are the best weights for fitting the calibration data?
+
++ In the calibration process, the building blocks are the (pixel-wise) *sample mean* and *sample variance*. We will develop the software to estimate these quantities in the following.
 
 = Tools: Sample statistics
 
@@ -277,10 +276,10 @@ var = s2/n # sample variance
 
 Exercises (addressed in the next slides):
 
-- Improve the code to save the first (element-wise) additions.
-- How to build the sequence of images?
++ Improve the code to save the first (element-wise) additions.
++ How to build the sequence of images?
 
-== Improved computations of the sample mean and variance
+== Saving computations for the sample mean and variance
 
 #[
   #set text(0.9em)
@@ -321,7 +320,8 @@ Reading the sequence of bias images can be done by:
 ```python
 import astrofocus as focus # for useful functions like readfits
 import glob
-seq = list(focus.readfits(filename) for filename in glob.glob('data/bias/bias-*.fits.gz'))
+files = glob.glob('data/bias/bias-*.fits.gz')
+seq = list(focus.readfits(file) for file in files)
 ```
 
 *Exercise:* Write a simple script based on the previous snippets to compute the sample mean and variance of your bias images stored in a Python list as above.
@@ -341,28 +341,28 @@ But this requires to have the data sequence in a single `numpy.ndarray`:
 import numpy as np # for arrays
 import astrofocus as focus # for useful functions like readfits
 import glob
-filenames = glob.glob('data/bias/bias-*.fits.gz')
-n = len(filenames) # number of images
-first_image = focus.readfits(filenames[0]) # read the 1st image
+files = glob.glob('data/bias/bias-*.fits.gz')
+n = len(files) # number of images
+first_image = focus.readfits(files[0]) # read the 1st image
 data = np.empty((n,) + first_image.shape, first_image.dtype)
 data[0, ...] = first_image
 for k in range(1, n):
-    data[k, ...] = focus.readfits(filenames[k])
+    data[k, ...] = focus.readfits(files[k])
 ```
 ]
 
 == Practice
 
-1. If each image of the sequence has `m₁ × m₂` pixels, what is the shape of `data`, the `num,py.ndarray` build and filled in the previous piece of code?
+1. If each image of the sequence has $m_1 × m_2$ pixels, what is the shape of `data`, the `num,py.ndarray` build and filled in the previous piece of code?
 + What is the axis number to use with keyword `axis` in `np.mean` and `np.var`?
 + Justify the choice of the position of the additional dimension.
 + Write two scripts to compute the sample mean and variance of your bias images: one with a list of images, the other for all data in a single `numpy.ndarray`. Ensure that the two give the same results.
 + Which of the two methods require the more computations?
 + What is the drawback of these methods when the sequence consists in a large number of images each with a large number of pixels?
 
-For the 2 last questions, think in terms of number of operations (commonly named _flops_ for floating-point operations) and in terms of occupied memory.
+For the 2 last questions, think in terms of number of operations, commonly named *flops* (for floating-point operations), and in terms of occupied memory.
 
-== A naive first attempt to save memory: math and code
+== A naïve single pass method: math and code
 
 #[
   #set text(0.85em)
@@ -377,13 +377,13 @@ which is the analog of $"Var"(y) = EE((y - EE(y))^2) = EE(y^2) - EE(y)^2$, we ca
 ```python
 import astrofocus as focus
 import glob
-filenames = glob.glob('data/bias/bias-*.fits.gz')
+files = glob.glob('data/bias/bias-*.fits.gz')
 s1, s2 = None, None
-for filename in filenames:
-    y = focus.readfits(filename)
+for file in files:
+    y = focus.readfits(file)
     s1 = increment(s1, y)
     s2 = increment(s2, y**2)
-n = len(filenames) # number of images
+n = len(files) # number of images
 avg = s1/n
 var = s2/n - avg**2
 ```
@@ -501,8 +501,8 @@ Updating formulae for computing the sample mean and central moments of independe
 import astrofocus as focus
 import glob
 n, avg, var = 0, None, None
-for filename in glob.glob('data/bias/bias-*.fits.gz'):
-    y = focus.readfits(filename)
+for file in glob.glob('data/bias/bias-*.fits.gz'):
+    y = focus.readfits(file)
     if n == 0:
         n = 1
         avg = y
@@ -516,23 +516,28 @@ for filename in glob.glob('data/bias/bias-*.fits.gz'):
 
 == Online statistics with AstroFocus
 
-The `AstroFocus` package provides a simple `SampleStatistics` class to compute the sample mean and variance by recurrence.
-The previous example becomes:
+The `AstroFocus` package provides a simple `SampleStatistics` class to compute
+the sample mean and variance by recurrence. The previous example becomes:
+
 ```python
 import astrofocus as focus
 import glob
 stat = focus.SampleStatictics() # initial object with no observations
-for filename in glob.glob('data/bias/bias-*.fits.gz'):
-    stat.update(focus.readfits(filename))
+for file in glob.glob('data/bias/bias-*.fits.gz'):
+    stat.update(focus.readfits(file))
 n = stat.count()
 avg = stat.mean()
 var = stat.var()
 ```
+
 You may save the sample statistics to a (compressed) FITS file:
+
 ```python
 stat.writeto('data/bias-stat.fits.gz')
 ```
+
 and, later, recover the sample statistics by:
+
 ```python
 stat = focus.SampleStatistics('data/bias-stat.fits.gz')
 ```
@@ -574,5 +579,4 @@ sum2 = zeros(bias[0].shape);
 for img in bias: sum2 += (img - avg)**2;
 var = sum2/(len(bias) - 1);
 figure(2); plt.clf(); plt.imshow(avg,vmin=1000,vmax=1050);
-
 ```
