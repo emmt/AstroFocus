@@ -547,7 +547,7 @@ stat = focus.SampleStatistics('data/bias-stat.fits.gz')
 
 + What are the most relevant quantities to memorize in order to reduce the
   number of operations? How does inline statistics code based on recurrence
-  formulae compares to the simple 2-pass method in terms of number of
+  formulae compares to the simple two-pass method in terms of number of
   operations?
 
 + Improve the code to take into account a mask that indicates the bad (or the
@@ -556,37 +556,49 @@ stat = focus.SampleStatistics('data/bias-stat.fits.gz')
 
 == Unbiased variance
 
+#[#set text(0.9em)
 The sample variance is a biased estimator of the variance:
 $
   EE(hat(v)_n) = (n - 1)/n thin "Var"(y)
 $
-an unbiased estimator is thus given by $frac(n thin hat(v)_n,(n -1), style: "horizontal")$.
+an unbiased estimator is thus given by:
+
+$
+    hat(s)_(n) = n/(n -1) thin hat(v)_n
+    = 1/(n -1) thin sum_(k=1)^(n) (y_k - hat(m)_n)^2
+$
 
 + Prove the above expectation of the sample variance.
-+ Modify (some of) your scripts to compute the _unbiased_ sample variance.
++ Modify your scripts to compute or update the _unbiased_ sample variance.
 
-With `AstroFocus`, the unbiased variance of an instance of `foxcus.SampleStatistics` is given by:
+With `AstroFocus`, the unbiased variance of an instance of
+`focus.SampleStatistics` is given by:
+
 ```python
 var = stat.var(corrected=True) # get unbiased estimator of the variance
 ```
+]
 
 == Online statistics references
+
+#[#set text(0.8em);
 
 Updating formulae for computing the sample mean and central moments of
 independent observations have many applications and have been studied and
 developed by many authors:
 
-#[#set text(0.8em);
-- B. P. Welford, 1962, _"Note on a Method for Calculating Corrected Sums of Squares and Products"_, Technometrics *4*, pp. 419-420
+- B. P. Welford, 1962, _"Note on a Method for Calculating Corrected Sums of
+  Squares and Products"_, Technometrics *4*, pp. 419-420
   (https://amstat.tandfonline.com/doi/abs/10.1080/00401706.1962.10490022)
 
-  An early publication of the recurrence formulae for the sample mean and (unbiased) variance.
+  An early publication of the recurrence formulae for the sample mean and
+  (unbiased) variance.
 
 - West
 
 - Chan et al.
 
-- Pébay
+- Pébay et al.
 ]
 
 == Code
