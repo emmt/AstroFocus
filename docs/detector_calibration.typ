@@ -7,6 +7,13 @@
   date: [novembre 2026, OHP],
 )
 
+// Reset raw blocks to the same size as normal text,
+// but keep inline raw at the reduced size.
+#show raw.where(block: true): set text(1em / 0.8)
+
+// Make inline raw text colored.
+#show raw.where(block: false): set text(eastern)
+
 #m.slide(layout: "title")
 
 = Prerequisites
@@ -20,8 +27,8 @@
   - `SciPy` for optimization (https://scipy.org/);
 
 - Custom package `AstroFocus` (https://github.com/emmt/AstroFocus), 2 possibilities:
-  - `git clone https://github.com/emmt/AstroFocus`
-  - download https://github.com/emmt/AstroFocus/archive/refs/heads/main.zip
+  - ```sh git clone https://github.com/emmt/AstroFocus```
+  - download and unpack code at:\ https://github.com/emmt/AstroFocus/archive/refs/heads/main.zip
 
 == Installation of AstroFocus
 
@@ -284,7 +291,10 @@ Exercises (addressed in the next slides):
 
 == Improved computations of the sample mean and variance
 
-Saving the first additions of the loops can be done as follows:
+#[
+  #set text(0.9em)
+
+Saving the first pixel-wise addition in each loop can be done as follows:
 
 ```python
 # helper function:
@@ -304,6 +314,7 @@ for y in seq:
     s2 = increment(s2, (y - avg)**2)
 var = s2/n # sample variance
 ```
+]
 
 == Reading the sequence of data
 
@@ -327,11 +338,12 @@ seq = list(focus.readfits(filename) for filename in glob.glob('data/bias/bias-*.
 
 == Sequence of data as a single `NumPy` array
 
-`NumPy` provides predefined functions to compute sample statistics:
+#[
+  #set text(0.9em)
 
-- `np.mean(data, axis=d)` or `data.mean(axis=d)` $->$ mean of `data` along axis `d`;
-- `np.var(data, axis=d)` or `data.std(axis=d)` $->$ sample variance of `data` along axis `d`;
-
+`NumPy` provides functions to compute the sample statistics of an array `A`:
+- `np.mean(A, axis=d)` or `A.mean(axis=d)` $->$ mean of `A` along axis `d`;
+- `np.var(A, axis=d)` or `A.var(axis=d)` $->$ sample variance of `A` along axis `d`.
 But this requires to have the data sequence in a single `numpy.ndarray`:
 
 ```python
@@ -340,12 +352,13 @@ import astrofocus as focus # for useful functions like readfits
 import glob
 filenames = glob.glob('data/bias/bias-*.fits.gz')
 n = len(filenames) # number of images
-first_image = focus.readfits(filenames[0]) # read the 1st image of the sequence
+first_image = focus.readfits(filenames[0]) # read the 1st image
 data = np.empty((n,) + first_image.shape, first_image.dtype)
 data[0, ...] = first_image
 for k in range(1, n):
     data[k, ...] = focus.readfits(filenames[k])
 ```
+]
 
 == Practice
 
@@ -358,6 +371,9 @@ for k in range(1, n):
 For the 2 last questions, think in terms of number of operations (commonly named _flops_ for floating-point operations) and in terms of occupied memory.
 
 == Saving memory, a first attempt
+
+#[
+  #set text(0.85em)
 
 /*It is in fact not necessary to store all the data sequence in memory. */ Using the following property of the sample variance:
 
@@ -379,6 +395,8 @@ n = len(filenames) # number of images
 avg = s1/n
 var = s2/n - avg**2
 ```
+]
+
 
 == Saving memory, a first attempt (continued)
 
