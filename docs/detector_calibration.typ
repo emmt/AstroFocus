@@ -3,8 +3,8 @@
 #show: m.setup.with(
   title: [Basics of Image Processing],
   subtitle: [with Python examples],
-  authors: [Éric Thiébaut, Jean-Philippe Berger, Ferréol Soulez],
-  date: [novembre 2026, OHP],
+  authors: [Éric Thiébaut, Jean-Philippe Berger & Ferréol Soulez],
+  date: [November 2026, Observatoire de Haute Provence],
 )
 
 // Reset raw blocks to the same size as normal text,
@@ -556,20 +556,16 @@ stat = focus.SampleStatistics('data/bias-stat.fits.gz')
 
 == Unbiased variance
 
-#[#set text(0.9em)
+#[#set text(0.8em)
 The sample variance is a biased estimator of the variance:
 $
   EE(hat(v)_n) = (n - 1)/n thin "Var"(y)
 $
 an unbiased estimator is thus given by:
-
 $
-    hat(s)_(n) = n/(n -1) thin hat(v)_n
-    = 1/(n -1) thin sum_(k=1)^(n) (y_k - hat(m)_n)^2
+  hat(s)_(n) = n/(n -1) thin hat(v)_n
+  = 1/(n -1) thin sum_(k=1)^(n) (y_k - hat(m)_n)^2
 $
-
-+ Prove the above expectation of the sample variance.
-+ Modify your scripts to compute or update the _unbiased_ sample variance.
 
 With `AstroFocus`, the unbiased variance of an instance of
 `focus.SampleStatistics` is given by:
@@ -577,6 +573,11 @@ With `AstroFocus`, the unbiased variance of an instance of
 ```python
 var = stat.var(corrected=True) # get unbiased estimator of the variance
 ```
+
++ Prove the above expectation of the sample variance.
++ To calibrate a detectors which of $hat(v)_n$ or $hat(s)_n$ shall be used?
++ Modify your scripts to compute or update the _unbiased_ sample variance.
+
 ]
 
 == Online statistics: alternate formulation
@@ -584,7 +585,7 @@ var = stat.var(corrected=True) # get unbiased estimator of the variance
 #[#set text(0.9em)
 
 Originally Welford (1962) proposed to update the sample mean $hat(m)_n$ and the
-    sum of squared residuals:
+sum of squared residuals:
 
 $
   hat(q)_(n) = sum_(k=1)^(n) (y_k - hat(m)_n)^2
