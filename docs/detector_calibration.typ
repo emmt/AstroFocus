@@ -593,9 +593,9 @@ $
 
 by the following recurrence rules (with $r_(n) = y_(n+1) - hat(m)_n$):
 $
-    hat(m)_(n+1) &= hat(m)_n + r_n/(n + 1) \
-    hat(q)_(n+1) &= hat(q)_n + r_n thin (y_(n+1) - hat(m)_(n + 1))
-    = hat(q)_n + n/(n + 1) thin r_(n)^2 \
+  hat(m)_(n+1) &= hat(m)_n + r_n/(n + 1) \
+  hat(q)_(n+1) &= hat(q)_n + r_n thin (y_(n+1) - hat(m)_(n + 1))
+  = hat(q)_n + n/(n + 1) thin r_(n)^2 \
 $
 
 + How to initialize the recurrence?

@@ -4,6 +4,7 @@
 	 (fill-column . 79)))
  (c-mode . ((c-file-style . "bsd")
 	    (c-basic-offset . 2)))
+ (typst-ts-mode . ((typst-ts-indent-offset . 2)))
  (java-mode . ((c-basic-offset . 4)))
  (julia-mode . ())
  (makefile-gmake-mode . ((indent-tabs-mode . t)))
