@@ -9,7 +9,7 @@ def readfits(filename):
     with fits.open(filename) as hdus:
         return hdus[0].data
 
-def writefits(filename, data, comment=None, history=None):
+def writefits(filename, data, comment=None, history=None, overwrite=False):
     """Write an image into a FITS file."""
     hdr = fits.Header()
     if comment is not None:
@@ -17,4 +17,4 @@ def writefits(filename, data, comment=None, history=None):
     if history is not None:
         hdr['HISTORY'] = history
     hdu = fits.PrimaryHDU(data, header=hdr)
-    hdu.writeto(filename)
+    hdu.writeto(filename, overwrite=overwrite)
