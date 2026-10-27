@@ -389,15 +389,25 @@ var = s2/n - avg**2
 ```
 ]
 
-== A naive first attempt to save memory: exercises
+== A naïve single pass method: exercises
 
-1. Prove the property of the sampled variance used in this new implementation. (Hint: just develop the square and simplify.)
-+ What are the memory requirements of the last version of the code? Does it depend on the length of the sequence?
-+ The last version of the code implements a *single pass* method to compute the sample mean and variance which means that each image can be read once and then forgotten. The previous versions were *two pass* methods: they can be written so as to avoid memorizing all the images simultaneously to the cost of reading the images twice.
+1. Justify the name of *single pass method* for this kind of code?
 
-== A naive first attempt to save memory: the failure
+   The previous versions of the code to compute the sample statistics were
+   *two-pass methods*: they can be written so as to avoid memorizing all the
+   images simultaneously to the cost of reading the images twice.
 
-In fact this version of the single pass method may be *unstable* and *grossly wrong* due to rounding errors. *It may even be the case that the sampled variance has negative values!*
++ What are the memory requirements of the naïve single pass method? Does it
+  depend on the length of the sequence?
+
++ Prove the property of the sampled variance used in the naïve single pass
+  method. (Hint: just develop the square and simplify.)
+
+== A naïve single pass method: the failure
+
+The naïve single pass method may be *unstable* and *grossly wrong* due to
+rounding errors. *It may even be the case that the sampled variance has
+negative values!*
 
 Example:
 ```python
