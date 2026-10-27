@@ -54,27 +54,18 @@ import astrofocus as focus
 
 == Code
 
-Typically your Python code will looks like:
+Typically your Python code will looks like (replace `some_dir` by a suitable path):
 
 ```python
+import sys
+sys.path.append("some_dir/astrofocus/src")
 import numpy as np # for arrays
 import matplotlib.pyplot as plt # for plotting
-from astrofocus import * # for useful functions
-from pathlib import Path
-datadir = '/home/eric/data/FOCUS/detector_calibration/SBIG-STF-8300M/'
-bias = [readfits(f) for f in Path(datadir + "/bias").iterdir() if f.is_file()]
-len(bias)
-sum1 = zeros(bias[0].shape);
-for b in bias: sum1 += b;
-avg = sum1/len(bias);
-figure(2); plt.clf(); plt.imshow(avg,vmin=1000,vmax=1050);
-plt.title("Mean bias ({} frame)");
-sum2 = zeros(bias[0].shape);
-for img in bias: sum2 += (img - avg)**2;
-var = sum2/(len(bias) - 1);
-figure(2); plt.clf(); plt.imshow(avg,vmin=1000,vmax=1050);
-
+import astrofocus as focus # for useful functions
+...
 ```
+
+In the examples, the two first lines will be omitted (just as if `AstroFocus` was a normal package).
 
 = Task 1: Detector calibration
 
@@ -237,6 +228,8 @@ If $u$ is unknown (e.g., because a calibrated source is not available), assuming
 
 - In the calibration process, the building blocks are the (pixel-wise) *sample mean* and *sample variance*. We will develop the software to estimate these quantities in the following.
 
+= Tools: Sample statistics
+
 == Sample statistics
 
 The pixel-wise sample mean and variance of a sequence of $n$ images $[y_(k)]_(k=1,...,n)$ are defined by:
@@ -252,11 +245,9 @@ Remarks:
 
 == A first Python implementation for the sample mean
 
-In Python, an image is typically stored as an `numpy.ndarray`, a data type provided by the `NumPy` package, the _de facto_ standard for dealing with large numerical arrays.
+In Python, an image is typically stored as an `numpy.ndarray` provided by the `NumPy` package, the _de facto_ standard for dealing with large numerical arrays.
 
-The convention that operations be applied *element-wise* matches the implementation of operations and elementary functions in `NumPy`.
-
-It is then straightforward to write Python code similar to the equations and with no explicit loops on the pixel indices:
+The convention that operations be applied *element-wise* matches the implementation of operations and elementary functions in `NumPy`. It is then straightforward to write Python code similar to the equations and with no explicit loops on the pixel indices:
 
 ```python
 s1 = 0
@@ -266,7 +257,7 @@ n = len(seq) # number of images
 avg = s1/n # sample mean
 ```
 
-where the image sequence `seq` is a Python `list` of images (each being an `numpy.ndarray`).
+where `seq` is a Python `list` of images (each is an `numpy.ndarray`).
 
 == A first Python implementation for the sample variance
 
@@ -318,7 +309,7 @@ var = s2/n # sample variance
 
 == Reading the sequence of data
 
-Suppose that the bias images are saved as (compressed) FITS file in some directory, say `data/bias`:
+Suppose that the bias images are saved as (compressed) FITS files in some directory, say `data/bias`:
 
 ```bash
 $ ls data/bias
@@ -333,7 +324,7 @@ import glob
 seq = list(focus.readfits(filename) for filename in glob.glob('data/bias/bias-*.fits.gz'))
 ```
 
-*Exercise:* Write a simple script based on the previous snippets to compute the sample mean and variance of your bias images.
+*Exercise:* Write a simple script based on the previous snippets to compute the sample mean and variance of your bias images stored in a Python list as above.
 
 
 == Sequence of data as a single `NumPy` array
@@ -363,14 +354,15 @@ for k in range(1, n):
 == Practice
 
 1. If each image of the sequence has `m₁ × m₂` pixels, what is the shape of `data`, the `num,py.ndarray` build and filled in the previous piece of code?
-2. What is the axis number to use with keyword `axis` in `np.mean` and `np.var`?
-3. Write two scripts to compute the sample mean and variance of your bias images: one with a list of images, the other for all data in a single `numpy.ndarray`. Ensure that the two give the same results.
-4. Which of the two methods require the more computations?
-5. What is the drawback of these methods when the sequence consists in a large number of images each with a large number of pixels?
++ What is the axis number to use with keyword `axis` in `np.mean` and `np.var`?
++ Justify the choice of the position of the additional dimension.
++ Write two scripts to compute the sample mean and variance of your bias images: one with a list of images, the other for all data in a single `numpy.ndarray`. Ensure that the two give the same results.
++ Which of the two methods require the more computations?
++ What is the drawback of these methods when the sequence consists in a large number of images each with a large number of pixels?
 
 For the 2 last questions, think in terms of number of operations (commonly named _flops_ for floating-point operations) and in terms of occupied memory.
 
-== Saving memory, a first attempt
+== A naive first attempt to save memory: math and code
 
 #[
   #set text(0.85em)
@@ -378,7 +370,7 @@ For the 2 last questions, think in terms of number of operations (commonly named
 /*It is in fact not necessary to store all the data sequence in memory. */ Using the following property of the sample variance:
 
 $
-    hat(v)_(n) = 1/n thin sum_(k=1)^(n) (y_(k) - hat(m)_(k))^2 = (1/n thin sum_(k=1)^(n) y_(k)^2) - hat(m)_(k)^2
+    hat(v)_(n) = 1/n thin sum_(k=1)^(n) (y_(k) - hat(m)_(n))^2 = (1/n thin sum_(k=1)^(n) y_(k)^2) - hat(m)_(n)^2
 $
 which is the analog of $"Var"(y) = EE((y - EE(y))^2) = EE(y^2) - EE(y)^2$, we can do:
 
@@ -397,47 +389,169 @@ var = s2/n - avg**2
 ```
 ]
 
+== A naive first attempt to save memory: exercises
 
-== Saving memory, a first attempt (continued)
+1. Prove the property of the sampled variance used in this new implementation. (Hint: just develop the square and simplify.)
++ What are the memory requirements of the last version of the code? Does it depend on the length of the sequence?
++ The last version of the code implements a *single pass* method to compute the sample mean and variance which means that each image can be read once and then forgotten. The previous versions were *two pass* methods: they can be written so as to avoid memorizing all the images simultaneously to the cost of reading the images twice.
 
-1. Prove the property of the sampled variance.
-2. What are the memory requirements of the last version of the code? Does it depend on the length of the sequence?
-3. The last version of the code implements a *single pass* method to compute the sample mean and variance which means that each image can be read once and then forgotten. The previous versions were *two pass* methods: they can be written so as to avoid memorizing all the images simultaneously to the cost of reading the images twice.
-4. In fact this version of the single pass method may be catastrophic in terms of rounding errors. It may even be the case that the sampled variance has negative values. Can you explain why? We will see how to solve this in the following thanks to recurrence formulae.
+== A naive first attempt to save memory: the failure
 
-== Cont'
+In fact this version of the single pass method may be *unstable* and *grossly wrong* due to rounding errors. *It may even be the case that the sampled variance has negative values!*
 
+Example:
 ```python
-import numpy as np # for arrays
-import matplotlib.pyplot as plt # for plotting
-import astrofocus as focus # for useful functions like readfits
-import glob
-seq = list(focus.readfits(filename) for filename in glob.glob('data/bias/bias-*.fits.gz'))
+Python 3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import numpy as np
+>>> y = 1 + np.array([2.827, -3.435, -3.423])*1e-9
+>>> (y**2).mean() - (y.mean())**2
+-1.1102230246251565e-16
 ```
 
-== Inline statistics
+Can you explain why? (You may notice that $EE(y)^2 >> "Var"(y)$.)
 
-When the data set consists in many large images, it may not be possible to read all the data in memory.
+This issue is solved in the following thanks to *stable recurrence formulae*.
+
+== Recurrence for the sample mean
+
+The sample mean for $n + 1$ observations can be expanded as follows:
+$
+  hat(m)_(n+1)
+  = 1/(n+1) sum_(k=1)^(n+1) y_k
+  &= 1/(n+1) sum_(k=1)^(n) y_k + y_(n+1)/(n+1) \
+  &= n/(n+1) thin hat(m)_(n) + y_(n+1)/(n+1) \
+  &= hat(m)_(n) + 1/(n+1) thin (y_(n+1) - hat(m)_(n)) \
+$
+to obtain the recurrence:
+$
+    hat(m)_1 &= y_1 \
+    hat(m)_(n+1) &= hat(m)_(n) + u_(n)
+    quad "with" quad u_(n) = 1/(n + 1) thin (y_(n+1) - hat(m)_(n))
+    quad "for" quad n ≥ 1 \
+$
+
+== Recurrence for the sample variance
+
+The sample variance for $n + 1$ observations:
+$
+  hat(v)_(n+1)
+    &= 1/(n+1) sum_(k=1)^(n+1) (y_k - hat(m)_(n+1))^2
+$
+can be rewritten to obtain the recurrence:
+$
+    hat(v)_1 &= 0 \
+    hat(v)_(n+1) &=  n/(n+1) thin hat(v)_(n) + n thin u_(n)^2
+    quad "with" quad u_(n) = 1/(n + 1) thin (y_(n+1) - hat(m)_(n))
+    quad "for" quad n ≥ 1 \
+$
+where $u_n^2$ denotes $u_n$ squared element by element.
+
+*Exercise:* Prove the above identity for $hat(v)_(n+1)$.
+
+== Proof of the recurrence for the sample variance
+
+We use $u_n = hat(m)_(n+1) - hat(m)_(n) = frac((y_(n+1) - hat(m)_(n)),(n + 1),style: "horizontal")$ to expand the sample variance for $n +1 $ observations:
+$
+  hat(v)_(n+1)
+    &= 1/(n+1) sum_(k=1)^(n+1) (y_k - hat(m)_(n+1))^2
+    = 1/(n+1) sum_(k=1)^(n+1) (y_k - hat(m)_(n) - u_(n))^2 \
+    &= 1/(n+1) sum_(k=1)^(n) [(y_k - hat(m)_(n)) - u_(n)]^2
+      + (y_(n+1) - hat(m)_(n) - u_(n))^2/(n+1) \
+    &= 1/(n+1) sum_(k=1)^(n) (y_k - hat(m)_(n))^2
+      - (2 thin u_(n))/(n+1) underbrace(sum_(k=1)^(n) (y_k - hat(m)_(n)),0)
+      + (n thin u_(n)^2)/(n+1)
+      + (n^2 thin u_(n)^2)/(n + 1) \
+    &= n/(n+1) thin v_(n) + n thin u_n^2 quad qed\
+$
+
+== Online statistics formulae
+
+The sample mean and sample variance of independent observations $(y_k)_(k=1,2,...)$ can be updated by the following recurrence rules:
 
 $
-hat(m)_n &= 1/n sum_(k=1)^(n) x_k = (n-1)/n hat(m)_(n-1) + 1/n x_n\
-hat(v)_n &= 1/(n - 1) sum_(k=1)^(n) (x_k - hat(m)_n)^2 \
-&= 1/(n - 1) sum_(k=1)^(n) ((x_k - hat(m)_(n-1)) + (hat(m)_(n-1) - hat(m)_(n)))^2
+  hat(m)_(n+1) &= cases(
+    y_(1) & "if" n = 0,
+    hat(m)_(n) + u_(n) & "if" n > 0) \
+  hat(v)_(n+1) &= cases(
+    0 & "if" n = 0,
+    n/(n+1) thin hat(v)_(n) + n thin u_(n)^2 & "if" n > 0) \
+  u_n &= 1/(n + 1) thin (y_(n+1) - hat(m)_(n)) \
 $
+
+== Online statistics references
+
+Updating formulae for computing the sample mean and central moments of independent observations have been developed by many authors:
+
+- B. P. Welford, 1962, "Note on a Method for Calculating Corrected Sums of Squares and Products", Technometrics 4, pp. 419-420, Taylor & Francis.
+- West
+- Chan et al.
+- Pébay
 
 == Exercices
 
-- Write a code sample that update the sample mean and sample variance for each new image.
++ Is it possible that the sample variance computed by recursion has some negative values? Consider that numerical operations in floating-point have limited precision and are subject to (small) rounding errors.
++ Write a code sample that update the sample mean and sample variance for each new image.
++ What are the most relevant quantities to memorize in order to reduce the number of operations? How does inline statistics code based on recurrence formulae compares to the simple 2-pass method in terms of number of operations?
++ Improve the code to take into account a mask that indicates the bad (or the good at your choice) pixels in each given image. The mask may be different for each image.
 
-- What are the most relevant quantities to memorize in order to reduce the number of operations? How does inline statistics code based on recurrence formulae compares to the simple 2-pass method in terms of number of operations?
+== Online statistics code
 
-- Improve the code to take into account a mask that indicates the bad (or the good at your choice) pixels in each given image. The mask may be different for each image.
+```python
+import astrofocus as focus
+import glob
+n, avg, var = 0, None, None
+for filename in glob.glob('data/bias/bias-*.fits.gz'):
+    y = focus.readfits(filename)
+    if n == 0:
+        n = 1
+        avg = y
+        var = 0
+    else:
+        np1 = n + 1
+        u = (y - avg)/np1
+        avg += u
+        var = (n/np1)*var + n*u**2
+```
 
-- Is it possible that the sample variance computed by recursion has some negative values? Consider that numerical operations in floating-point have limited precision and are subject to (small) rounding errors.
+== Online statistics with AstroFocus
 
-== Practice
+The `AstroFocus` package provides a simple `SampleStatistics` class to compute the sample mean and variance by recurrence.
+The previous example becomes:
+```python
+import astrofocus as focus
+import glob
+stat = focus.SampleStatictics() # initial object with no observations
+for filename in glob.glob('data/bias/bias-*.fits.gz'):
+    stat.update(focus.readfits(filename))
+n = stat.count()
+avg = stat.mean()
+var = stat.var()
+```
+You may save the sample statistics to a (compressed) FITS file:
+```python
+stat.writeto('data/bias-stat.fits.gz')
+```
+and, later, recover the sample statistics by:
+```python
+stat = focus.SampleStatistics('data/bias-stat.fits.gz')
+```
 
-1. Modify (some of) your scripts to compute the _unbiased_ sample variance.
+== Unbiased variance
+
+The sample variance is a biased estimator of the variance:
+$
+  EE(hat(v)_n) = (n - 1)/n thin "Var"(y)
+$
+an unbiased estimator is thus given by $frac(n thin hat(v)_n,(n -1), style: "horizontal")$.
+
++ Prove the above expectation of the sample variance.
++ Modify (some of) your scripts to compute the _unbiased_ sample variance.
+
+With `AstroFocus`, the unbiased variance of an instance of `foxcus.SampleStatistics` is given by:
+```python
+var = stat.var(corrected=True) # get unbiased estimator of the variance
+```
 
 == Code
 
