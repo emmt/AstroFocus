@@ -136,7 +136,7 @@ class SampleStatistics:
             self._var[where] = n*(v/np1 + np.square(u))
         return None
 
-    def writeto(self, filename):
+    def writeto(self, filename, *, overwrite=False):
         """Write sample statistics to a FITS file."""
         hdr = fits.Header()
         hdr['HDUNAME'] = ('SAMPLE_STATISTICS', 'This HDU contains sample statistics')
@@ -157,7 +157,7 @@ class SampleStatistics:
         data[offset + 0, ...] = avg
         data[offset + 1, ...] = self._var
         hdu = fits.PrimaryHDU(data=data, header=hdr)
-        hdu.writeto(filename)
+        hdu.writeto(filename, overwrite=overwrite)
         return None
 
     def readfrom(self, filename):
