@@ -54,7 +54,7 @@ class SampleStatistics:
 
     def mean(self):
         """Return the sample mean of the observations accumulated in `self`."""
-        return self._avg
+        return np.asarray(self._avg)
 
     def var(self, corrected=False):
         """Return the sample variance of the observations accumulated in
@@ -64,11 +64,12 @@ class SampleStatistics:
         returned; otherwise, a maximum likelihood estimator is returned.
 
         """
+        var = np.asarray(self._var)
         if corrected:
             n = self._cnt
-            return (n / (n - 1)) * self._var
+            return (n / (n - 1)) * var
         else:
-            return self._var
+            return var
 
     def std(self, corrected=False):
         """Return the sample standard deviation of the observations accumulated
@@ -145,14 +146,15 @@ class SampleStatistics:
             nobs = self._cnt.ravel()[0]
         else:
             nobs = None
-        data = np.empty((nobs is None and 3 or 2,) + self._avg.shape, self._avg.dtype)
+        avg = self.mean()
+        data = np.empty((nobs is None and 3 or 2,) + avg.shape, avg.dtype)
         if nobs is None:
             data[0, ...] = self._cnt
             offset = 1
         else:
             hdr['NOBS'] = (nobs, 'Number of observations')
             offset = 0
-        data[offset + 0, ...] = self._avg
+        data[offset + 0, ...] = avg
         data[offset + 1, ...] = self._var
         hdu = fits.PrimaryHDU(data=data, header=hdr)
         hdu.writeto(filename)
