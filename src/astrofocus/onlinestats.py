@@ -99,7 +99,7 @@ class SampleStatistics:
         `None`, `True, nor `False`, it is broadcast to the shape of `data`. For
         example, to exclude NaNs:
 
-        ``self.update(date, where=~np.isnan(data))``
+        ``self.update(data, where=~np.isnan(data))``
 
         """
         if where is None or np.all(where):
