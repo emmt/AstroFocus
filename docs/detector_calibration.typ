@@ -44,7 +44,8 @@ or downloading and unpacking archive at
 https://github.com/emmt/AstroFocus/archive/refs/heads/main.zip
 ```
 
-Start Python and execute the following snippet after replacing `some_dir` by the path to the cloned Git repository or unpacked archive:
+start Python and execute the following snippet after replacing `some_dir` by
+the path to the cloned Git repository or unpacked archive:
 
 ```python
 import sys
@@ -59,13 +60,14 @@ Typically your Python code will looks like (replace `some_dir` by a suitable pat
 ```python
 import sys
 sys.path.append("some_dir/astrofocus/src")
+import astrofocus as focus # for useful functions
 import numpy as np # for arrays
 import matplotlib.pyplot as plt # for plotting
-import astrofocus as focus # for useful functions
 ...
 ```
 
-In the following examples, the two first lines will be omitted (just as if `AstroFocus` was a normal package).
+In the following examples, the two first lines will be omitted (just as if
+`AstroFocus` was a normal package).
 
 = Task 1: Detector calibration
 
@@ -629,25 +631,157 @@ developed by many authors:
 - Pébay et al.
 ]
 
-== Code
+= Python quick reference
 
-Typically your Python code will looks like:
+== Python basics
 
-```python
-import numpy as np # for arrays
-import matplotlib.pyplot as plt # for plotting
-from astrofocus import * # for useful functions
-from pathlib import Path
-datadir = '/home/eric/data/FOCUS/detector_calibration/SBIG-STF-8300M/'
-bias = [readfits(f) for f in Path(datadir + "/bias").iterdir() if f.is_file()]
-len(bias)
-sum1 = zeros(bias[0].shape);
-for b in bias: sum1 += b;
-avg = sum1/len(bias);
-figure(2); plt.clf(); plt.imshow(avg,vmin=1000,vmax=1050);
-plt.title("Mean bias ({} frame)");
-sum2 = zeros(bias[0].shape);
-for img in bias: sum2 += (img - avg)**2;
-var = sum2/(len(bias) - 1);
-figure(2); plt.clf(); plt.imshow(avg,vmin=1000,vmax=1050);
+```py
+# Initialization.
+import astrofocus as focus      # AstroFocus package
+import numpy as np              # NumPy package for multi-dimensional arrays
+import matplotlib.pyplot as plt # PyPlot package for plotting
+
+# Elements of syntax.
+x = expr                 # evaluate 'expr' and store result in variable 'x'
+focus.include('file.py') # execute the content of 'file.py' in Python
+help(focus.include)      # print help about some function
+def f(arg1, arg2, ...):  # define a fonction 'f'
+    ...                  # the body of the function is indented
+    return expr          # return the result
 ```
+
+== Multi-dimensional arrays with `NumPy`
+
+#[#set text(0.8em)
+```py
+x = np.array([[1,2,3],[4,5,6]]) # a 2-dimensional array of shape 2×3
+x.size         # number of elements in 'x'
+x.shape        # dimensions of 'x'
+x[i]           # the 'i'-th element of 'x' (1st element at index 0)
+x[i,j]         # a given element in a 2-dimensional array
+x[i,:]         # a slice where 1st index is 'i' for 'x' 2-dimensional
+x[i,...]       # a slice where 1st index is 'i' for 'x' multi-dimensional
+x[...,k]       # a slice where last index is 'k'
+x[i1:i2,j1:j2] # the region 'i1 ≤ i < i2' and 'j1 ≤ j < j2'
+x[cond]        # the region where 'cond' is true
+x[x >= 0]      # the nonnegative elements of 'x'
+
+shape = (dim1, dim2, dim3, ...)        # tuple of array dimensions
+a = np.empty(shape, dtype=dtype)       # with undefined content
+a = np.zeros(shape, dtype=dtype)       # filled with zeros
+a = np.ones(shape, dtype=dtype)        # filled with ones
+a = np.full(shape, value, dtype=dtype) # filled with 'value'
+a = focus.rand(shape)  # generate array of uniformly distributed random values in [0,1)
+a = focus.randn(shape) # generate array of normally distributed random values
+```
+]
+
+== Useful things from `AstroFocus` and `NumPy` packages
+
+#[#set text(0.8em)
+```py
+# FITS files
+data = focus.readfits("filename") # read a FITS image
+focus.writefits("filename", data) # write a FITS image
+
+# Fast Fourier transforms
+z = focus.fft(x)                  # compute the FFT of 'x'
+x = focus.ifft(z)                 # inverse FFT of 'z'
+focus.fftshift(x)                 # recenter output of FFT
+focus.ifftshift(x)                # recenter input to FFT
+
+# Useful functions
+np.real(z)                        # real part of 'z'
+np.imag(z)                        # imaginary part of 'z'
+np.conj(z)                        # complex conjugate of 'z'
+focus.abs2(z)                     # squared modulus of 'z'
+focus.zeropad(x, shape)           # zero-pad 'x' to given dimensions
+focus.conjgrad(A, b, ...)         # conjugate gradient method
+focus.DtD(x)                      # compute D'⋅D⋅x with the finite differenc
+```
+]
+
+== Plotting curves with `Matplotlib`
+
+#[#set text(0.8em)
+
+```py
+# Curves.
+x = np.linspace(-3, 5, 200)            # some evenly spaced values in [-3,5]
+y = np.cos(x)                          # element-wise 'cos(x)'
+plt.figure()                           # create a new graphical output
+plt.plot(x, y, label='cos(x)')         # plot `y` as a function of `x`
+plt.plot(x, np.sin(x), label='sin(x)') # plot `sin` as a function of `x`
+plt.title('Figure Title')              # add title
+plt.xlabel('Abscissae')                # add label for x-axis
+plt.ylabel('Ordinates')                # add label for y-axis
+plt.title('Trigonometric functions')   # add title
+plt.legend()                           # add legend box
+plt.savefig('example.png')             # save figure to file
+plt.show()                             # render plot(s) in graphic window which must be closed
+                                       # to continue (not needed if interactive mode enabled)
+
+# Interactive mode and rendering.
+plt.ion()                              # enable interactive mode for plotting
+plt.ioff()                             # disable interactive mode for plotting
+```
+]
+
+== Plotting images with `Matplotlib`
+
+#[#set text(0.8em)
+
+```py
+# Images.
+img = focus.readfits("some_file.fits")     # read an image
+plt.figure(3)                              # select figure 3 for plotting
+plt.clf()                                  # clear figure
+plt.imshow(img, vmin=0)                    # display image, clipping negative values
+plt.clf()                                  # clear figure
+plt.imshow(img, vmin=0, cmap='gist_stern') # redraw with 'gist_stern' colors
+plt.figure(4)                              # select figure 4 for plotting
+plt.clf()                                  # clear figure
+plt.imshow(img, vmin=0, origin='lower')    # redraw with origin of coordinates at bottom
+plt.colorbar(location='top')               # add a color bar
+```
+]
+
+== Reduction and statistics with `NumPy`
+
+```py
+# Assuming variable 'x' stores a NumPy array, then
+x.sum()        # sum of values in 'x'
+x.sum(axis=d)  # sum along axis 'd'
+x.mean()       # mean of values in 'x'
+x.mean(axis=d) # mean along axis 'd'
+x.var()        # variance of values in 'x'
+x.var(axis=d)  # variance along axis 'd'
+x.std()        # standard deviation of values in 'x'
+x.std(axis=d)  # standard deviation along axis 'd'
+```
+
+== Sample statistics with `AstroFocus`
+
+#[#set text(0.8em)
+  ```python
+# Sample statistics
+stat = focus.SampleStatistics()         # create object to store sample statistics
+stat.update(data)                       # update with new observations
+stat.update(data, where)                # idem but only for valid data
+stat.count()                            # get number of observations
+stat.mean()                             # get sample mean
+stat.var()                              # get sample variance
+stat.var(corrected=True)                # get unbiased variance estimator
+stat.std()                              # get sample standard deviation
+stat.std(corrected=True)                # get square root of unbiased variance
+stat.writeto(filename)                  # save statistics to FITS file
+stat = focus.SampleStatistics(filename) # read statistics from FITS file
+
+# Example
+from glob import glob
+stat = focus.SampleStatictics() # initial object with no observations
+for file in glob('data/bias/bias-*.fits.gz'):
+    img = focus.readfits(file)
+    stat.update(img, where = ~np.isnan(img)) # do not consider NaNs
+```
+]
