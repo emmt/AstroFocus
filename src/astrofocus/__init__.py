@@ -2,6 +2,7 @@
 
 from .fits import readfits, writefits
 
+from .images import ImageROI
 from .onlinestats import SampleStatistics
 
 from .optim.conjgrad import conjgrad
