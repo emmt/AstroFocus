@@ -5,6 +5,10 @@
 import numpy as np
 from numpy import conj, real, imag, log, sqrt, ones, zeros, empty
 
+def include(filename):
+    """Execute the Python commands in a file."""
+    exec(open(filename).read(), globals())
+
 rand = np.random.random_sample
 randn = np.random.standard_normal
 
