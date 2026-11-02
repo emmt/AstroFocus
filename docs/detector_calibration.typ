@@ -253,7 +253,7 @@ The convention that operations be applied *element-wise* matches the implementat
 ```python
 s1 = 0
 for y in seq:
-    s1 += y
+    s1 = s1 + y
 n = len(seq) # number of images
 avg = s1/n # sample mean
 ```
@@ -267,12 +267,12 @@ Computing the sample variance (after the sample mean) follows the same pattern:
 ```python
 s1 = 0
 for y in seq:
-    s1 += y
+    s1 = s1 + y
 n = len(seq) # number of images
 avg = s1/n # sample mean
 s2 = 0
 for y in seq:
-    s2 += (y - avg)**2
+    s2 = s2 + (y - avg)**2
 var = s2/n # sample variance
 ```
 
@@ -512,6 +512,8 @@ for file in glob.glob('data/bias/bias-*.fits.gz'):
 
 == Online statistics with AstroFocus
 
+#[#set text(0.9em)
+
 The `AstroFocus` package provides a simple `SampleStatistics` class to compute
 the sample mean and variance by recurrence. The previous example becomes:
 
@@ -537,6 +539,7 @@ and, later, recover the sample statistics by:
 ```python
 stat = focus.SampleStatistics('data/bias-stat.fits.gz')
 ```
+]
 
 == Exercices
 
