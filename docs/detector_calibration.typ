@@ -611,24 +611,42 @@ $
 
 == Online statistics references
 
-#[#set text(0.8em)
+#[#set text(0.63em)
 
 Updating formulae for computing the sample mean and central moments of
 independent observations have many applications and have been studied and
-developed by many authors:
+developed by many authors. A few recommended papers are:
 
 - B. P. Welford, 1962, _"Note on a Method for Calculating Corrected Sums of
   Squares and Products"_, Technometrics *4*, pp. 419-420
-  (https://amstat.tandfonline.com/doi/abs/10.1080/00401706.1962.10490022)
+  (https://amstat.tandfonline.com/doi/abs/10.1080/00401706.1962.10490022).
 
   An early publication of the recurrence formulae for the sample mean and
   (unbiased) variance.
 
-- West
+- D. H. D. West, 1979, _"Updating mean and variance estimates: an improved
+  method"_, Communications of the ACM *22*, pp. 532-535 (DOI:
+  10.1145/359146.359153).
 
-- Chan et al.
+  The author provide stable and accurate recurrence formulae for computing
+  weighted mean and variance.
 
-- Pébay et al.
+- T. F. Chan, G. H. Golub & R. J. Leveque, 1983, _"Algorithms for Computing the
+  Sample Variance: Analysis and Recommendations"_, The American Statistician
+  *37*, pp. 242-247 (DOI: 10.1080/00031305.1983.10483115).
+
+  The authors studied the roundoff errors of various estimators for sample
+  statistics.
+
+- P. Pébay, T. B. Terriberry, H. Kolla & J. Bennett, 2016, _"Numerically
+  stable, scalable formulas for parallel and online computation of higher-order
+  multivariate central moments with arbitrary weights"_, Computational
+  Statistics *31*, pp. 1305-1325 (DOI: 10.1007/s00180-015-0637-z).
+
+  The authors give general recurrence formulae for computing any sample
+  statistics moments and for merging the sample statistics of independent data
+  sets.
+
 ]
 
 = Python quick reference
