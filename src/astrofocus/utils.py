@@ -122,3 +122,50 @@ def DtD(x):
         y[:,:,:,:,0:-1,...] -= d
     if rank == 5: return y
     raise ValueError('too many dimensions')
+
+def outer_sum(a, *args):
+    """Return the outer sum of array `a` and each of `args`.
+
+    For 2 arguments, the result ``out = outer_sum(a, b)`` has shape
+    `a.shape + b.shape` and is computed as:
+
+    ``out[i₁,…,iₘ,j₁,…,jₙ] = a[i₁,…,iₘ] + b[j₁,…,jₙ]``.
+
+    For 3 arguments, ``outer_sum(a, b, c)`` is the same as
+    ``outer_sum(outer_sum(a, b), c)`` and so on for more arguments.
+
+    """
+    a = np.asarray(a)
+    for b in args:
+        b = np.asarray(b)
+        a = a.reshape(a.shape + (1,)*b.ndim) + b
+    return a
+
+def outer_diff(a, b):
+    """Return the outer difference of arrays `a` and `b`.
+
+    The result `out` has shape `a.shape + b.shape` and is computed as:
+    ``out[i₁,…,iₘ,j₁,…,jₙ] = a[i₁,…,iₘ] - b[j₁,…,jₙ]``.
+
+    """
+    a = np.asarray(a)
+    b = np.asarray(b)
+    return a.reshape(a.shape + (1,)*b.ndim) - b
+
+def outer_prod(a, *args):
+    """Return the outer product of array `a` and each of `args`.
+
+    For 2 arguments, the result ``out = outer_prod(a, b)`` has shape
+    `a.shape + b.shape` and is computed as:
+
+    ``out[i₁,…,iₘ,j₁,…,jₙ] = a[i₁,…,iₘ] * b[j₁,…,jₙ]``.
+
+    For 3 arguments, ``outer_prod(a, b, c)`` is the same as
+    ``outer_prod(outer_prod(a, b), c)`` and so on for more arguments.
+
+    """
+    a = np.asarray(a)
+    for b in args:
+        b = np.asarray(b)
+        a = a.reshape(a.shape + (1,)*b.ndim) * b
+    return a

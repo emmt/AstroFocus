@@ -3,6 +3,7 @@
 from .fits import readfits, writefits
 
 from .images import ImageROI
+
 from .onlinestats import SampleStatistics
 
 from .optim.conjgrad import conjgrad
@@ -12,6 +13,7 @@ from .utils import rand, randn
 from .utils import fftshift, ifftshift, fft, ifft
 from .utils import abs2, normalize, zeropad
 from .utils import DtD
+from .utils import outer_sum, outer_diff, outer_prod
 
 from numpy import conj
 
