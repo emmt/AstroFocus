@@ -2,6 +2,8 @@
 
 from .fits import readfits, writefits
 
+from .centroids import center_of_gravity, fix_weights, invert_2x2_symmetric_matrix
+
 from .chamferdistance import ChamferDistanceToGrid
 from .chamferdistance import offset_to_nearest_grid_node, index_of_nearest_grid_node
 
