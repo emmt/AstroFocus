@@ -2,6 +2,10 @@
 
 from .fits import readfits, writefits
 
+from .filters import ball_2d_window
+from .filters import GAUSSIAN_FWHM, gaussian_1d_filter, gaussian_2d_filter
+from .filters import CUBIC_BSPLINE_FWHM, cubic_bspline, cubic_bspline_1d_filter, cubic_bspline_2d_filter
+
 from .images import ImageROI
 
 from .onlinestats import SampleStatistics
