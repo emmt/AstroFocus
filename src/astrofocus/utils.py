@@ -19,6 +19,12 @@ ifftshift = np.fft.ifftshift
 fft = np.fft.fftn
 def ifft(x): return np.real(np.fft.ifftn(x))
 
+def fft_dist(shape):
+    a = abs2(np.fft.fftfreq(shape[0],d=1./shape[0]))
+    if len(shape)>1:
+        a = a.reshape(shape[0],1)+abs2(np.fft.fftfreq(shape[1],d=1./shape[1]))
+    return np.sqrt(a)
+    
 def abs2(x):
     """
     Returns the squared absolute value of `x`.
@@ -122,3 +128,7 @@ def DtD(x):
         y[:,:,:,:,0:-1,...] -= d
     if rank == 5: return y
     raise ValueError('too many dimensions')
+
+def powerLaw(shape,param):
+    r= fft_dist(shape)+ np.finfo(float).eps
+    return (10**param[0])* (r**(param[1]))
