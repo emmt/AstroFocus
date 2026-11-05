@@ -7,6 +7,9 @@
   date: [November 2026, Observatoire de Haute Provence],
 )
 
+#let argmin = $op("arg min", limits:#true)$
+#let argmax = $op("arg max", limits:#true)$
+
 // Reset raw blocks to the same size as normal text,
 // but keep inline raw at the reduced size.
 #show raw.where(block: true): set text(1em / 0.8)
@@ -651,6 +654,133 @@ developed by many authors. A few recommended papers are:
   sets.
 
 ]
+
+/*
+
+= Tool: Fitting a model
+
+== Linear regression
+
+One of the most simple model is to assume that measurements (sometimes called
+the *dependent variables*) follow an affine model:
+
+$
+  y_i ≈ alpha thin z_i + beta
+$
+
+where $z_i$ are known *independent variables* while $alpha$ and $beta$ are
+*unknown parameters* which can be estimated by a *linear regression*:
+
+$
+  (hat(alpha), hat(beta)) = argmin_(alpha,beta)sum_i (alpha thin z_i + beta - y_i)^2
+$
+
+*Exercice:* Justify this approach.
+
+*Example:* Calibration of the dark current of a detector: $y_i^("dark") ≈ d thin
+Delta t_i + b$ for different exposure times $Delta t_i$. Here: $y_i^("dark")$
+are the dependent variables, $Delta t_i$ are the dependent variables, and
+$(d,b)$ are the unknown parameters.
+
+
+== Generalization to any linear model
+
+Using linear algebra notation, the simple affine model can be put in a more general form:
+
+$
+  y_i ≈ sum_j H_(i,j) thin x_j = (bold(H) ⋅ bold(x))_i quad (forall i = 1, ..., m)
+  quad <==> quad bold(y) ≈ bold(H)⋅bold(x)
+$
+
+with $y in RR^(m)$ the measurements, $bold(x) in RR^(n)$ the unknown parameters, and
+$bold(H) in RR^(m × n)$ the known linear model matrix.
+
+In the previous case (exercice: check this is correct):
+
+$
+  bold(x) = mat(beta; alpha) quad "and" quad bold(H) = mat(1, z_1; 1, z_2; dots.v, dots.v; 1, z_m)
+$
+
+== Linear least squares
+
+The best parameters $bold(x)$ satisfying $bold(y) ≈ bold(H)⋅bold(x)$ in the least squares sense
+are given by:
+
+$
+  hat(bold(x))
+  = argmin_(bold(x)) sum_(i=1)^(m) ((bold(H)⋅bold(x))_i - y_i)^2
+  = argmin_(bold(x)) ||bold(y) - bold(H)⋅bold(x)||^2
+$
+
+Since (exercise: prove this expression):
+
+$
+  (partial ||bold(y) - bold(H)⋅bold(x)||^2)/(partial bold(x))
+  = 2 thin bold(H)^(top)⋅(bold(H)⋅bold(x) - bold(y))
+$
+
+The least squares estimator $hat(bold(x))$ the solution of the so called *normal equations*:
+
+$
+  (bold(H)^(top)⋅bold(H))⋅hat(bold(x)) = bold(H)^(top)⋅bold(y)
+$
+
+== Application to a simple line fit
+
+For
+
+$
+  bold(x) = mat(beta; alpha)
+  quad "and" quad
+  bold(H) = mat(1, z_1; 1, z_2; dots.v, dots.v; 1, z_m),
+$
+
+the normal equations write:
+
+$
+  mat(sum_(i=1)^(m) 1, sum_(i=1)^(m) z_i; sum_(i=1)^(m) z_i, sum_(i=1)^(m) z_i^2)⋅mat(beta; alpha)
+  = mat(sum_(i=1)^(m) y_i; sum_(i=1)^(m) z_i thin y_i)
+$
+
+*Exercise:* Write $bold(x)$ and $bold(H)$ for other models: a polynomial of
+given degree, a basis of function.
+
+
+== Non-linear least squares
+
+A more general model of the dependent variables is given by:
+
+$
+  bold(y) ≈ cal(H)(bold(x))
+$
+
+where $cal(H): RR^(n) -> RR^(m)$ may be a non-linear function.
+
+The least squares estimator of the parameters writes:
+
+$
+  hat(bold(x)) = argmin_(bold(x)) ||bold(y) - cal(H)(bold(x))||^2
+$
+
+The normal equations must be replaced by the first order necessary condition:
+
+$
+  (partial cal(H)(hat(bold(x))))/(partial bold(x))⋅(cal(H)(bold(x)) - bold(y)) = bold(0)
+$
+
+
+But there is no closed-form expression of the solution (in general and if
+$cal(H)$ is non-linear) $-->$ an iterative numerical method must be used to
+solve the problem.
+
+== Weighted least squares
+
+In the least squares approach, all measurements have the same importance
+(why?). Can you suggest a method to account for measurements of uneven quality?
+
+Exercise: In the case of dark current calibration, what is the expression of the weights?
+
+*/
 
 = Python quick reference
 
