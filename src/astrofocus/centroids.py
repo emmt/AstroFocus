@@ -2,7 +2,6 @@
 
 """Implement centroiding methods such as the center of gravity."""
 
-import copy
 import time
 import numpy as np
 
@@ -20,7 +19,7 @@ def center_of_gravity(w, x, y, *, covariance=False, gamma=None, sigma=None):
 
     Argument `w` specifies the weights which must all be finite and
     non-negative (this is not checked). If this is not the case, you may call
-    `centroids.fix_weights(w)`.
+    ``centroids.fix_weights(w)``.
 
     Arguments `x` and `y` specify the coordinates at each weight (they must all
     be finite, this is not checked).
@@ -30,9 +29,10 @@ def center_of_gravity(w, x, y, *, covariance=False, gamma=None, sigma=None):
     Keyword `covariance` specifies whether to also return the covariance of the
     center of gravity. If `covariance` is `False`, the result is the 2-tuple
     ``(xc, yc)`` with the coordinates of the center of gravity. If `covariance`
-    is `True`, the result is the 5-tuple ``(xc, yc, Cxx, Cxy, Cyy)`` where
-    `Cxx`, `Cxy`, and `Cyy` are the coefficients of the center of gravity
-    covariance. Three different noise models are possible:
+    is `True`, the result is the 5-tuple ``(xc, yc, cxx, cxy, cyy)`` where
+    `cxx` is the variance of `xc`, `cxy` is the covariance and of `xc` and
+    `yc`, and `cyy` is the variance of `yc`. Three different noise models are
+    possible:
 
     - If `sigma` is `None` or `0`, it is assumed that independent Poisson noise
       dominates with a variance given by `w` if `gamma` is `None` (the default)
@@ -51,7 +51,7 @@ def center_of_gravity(w, x, y, *, covariance=False, gamma=None, sigma=None):
     independent noise (i.e. not the photon noise). This keyword is ignored if
     `covariance` is `False`.
 
-    You may call ``centroids.invert_2x2_symmetric_matrix(Cxx, Cxy, Cyy)`` to
+    You may call ``centroids.invert_2x2_symmetric_matrix(cxx, cxy, cyy)`` to
     compute the precision matrix of the center of gravity.
 
     """
@@ -97,27 +97,28 @@ def center_of_gravity(w, x, y, *, covariance=False, gamma=None, sigma=None):
 
     if q is None:
         # No signal-dependent variance.
-        Cxx = (dx**2).sum()*r
-        Cxy = (dx*dy).sum()*r
-        Cxy = (dy**2).sum()*r
+        cxx = (dx**2).sum()*r
+        cxy = (dx*dy).sum()*r
+        cxy = (dy**2).sum()*r
     else:
         # Account for signal-dependent variance.
-        Cxx = (q*dx**2).sum()*r
-        Cxy = (q*dx*dy).sum()*r
-        Cyy = (q*dy**2).sum()*r
+        cxx = (q*dx**2).sum()*r
+        cxy = (q*dx*dy).sum()*r
+        cyy = (q*dy**2).sum()*r
 
     # Return the centroid coordinates and their covariance.
-    return (xc, yc, Cxx, Cyy, Cxy)
+    return (xc, yc, cxx, cxy, cyy)
 
-def invert_2x2_symmetric_matrix(Axx, Axy, Ayy):
+def invert_2x2_symmetric_matrix(a_11, a_12, a_22):
     """Invert a 2×2 symmetric matrix.
 
-    Return a 3-tuple ``(Bxx, Bxy, Byy)`` such that ``[[Bxx, Bxy], [Bxy, Byy]]`` is the
-    inverse of ``[[Axx, Axy], [Axy, Ayy]]``.
+    Return a 3-tuple ``(b_11, b_12, b_22)`` such that
+    ``B = [[b_11, b_12], [b_12, b_22]]`` is the inverse of
+    ``A = [[a_11, a_12], [a_12, a_22]]``.
 
     """
-    den = Axx*Ayy - Axy**2
-    return Ayy/den, -Axy/den, Axx/den
+    den = a_11*a_22 - a_12**2
+    return a_22/den, -a_12/den, a_11/den
 
 def _bench0(n=10000000):
     t0 = time.time()
@@ -131,6 +132,9 @@ def _bench1(n=10000000):
         assert i >= 0
     return (time.time() - t0)/n
 
+# TODO Update the following tests for the new code where function `fix_weights`
+#      replaces option `check=True`.
+#
 # With check=False, covariance=False
 # ≈ 4.6 μs for a 11×11 ROI in float32 -> ≈ 130 Gflops/s
 #
@@ -144,10 +148,10 @@ def _bench1(n=10000000):
 # With check=True, covariance=True
 # ≈ 15.3 μs for a 11×11 ROI in float32 without `broadcast_arrays` -> ≈ 103 Gflops/s
 # ≈ 17.5 μs with `broadcast_arrays`
-def _bench2(w, x, y, *, n=100000, check=True, covariance=False):
+def _bench2(w, x, y, *, n=100000, covariance=False):
     t0 = time.time()
     for i in range(n):
-        center_of_gravity(w, x, y, check=check, covariance=covariance)
+        center_of_gravity(w, x, y, covariance=covariance)
     return (time.time() - t0)/n
 
 def _bench3(w, x, y, *, n=100000):
