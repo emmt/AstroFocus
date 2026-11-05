@@ -21,7 +21,7 @@ from .utils import Result, vector_like_length
 # NOTE detection threshold can be based on the RMS of the background.
 # Two possibilities to reduce the number of false positive:
 # - increase the value of the detection threshold `detect_level`
-# - increase the radius of the local neighborhood `ball_radius`
+# - increase the radius of the local neighborhood `detect_radius`
 #
 # TODO have a single parameter grid_rtol to tune the tolerance relative
 #      to the step which accounts for:
@@ -29,67 +29,117 @@ from .utils import Result, vector_like_length
 #      - how far from a grid node can be a spot
 
 def detect_grid_of_spots(img, *,
-                         grid_shape=None, # `None` or `(nrows, ncols)`
-                         fig=None, # `None` to not plot anything
+                         # General keywords:
+                         centroiding=False,
+                         verbosity=1, # 0 or None for quiet / 1 for info / 2 for full
+                         # Matched filter (stage 1.a):
+                         spot_fwhm=5.0,
+                         spot_footprint='spline',
+                         robust_to_background=False,
+                         background_level=0.0,
+                         # Spot detection (stage 1.b):
+                         detect_radius=None,
+                         detect_level=0.0,
+                         # Grid geometry (stage 2):
                          grid_step=32,
                          grid_step_bounds=None, # `None` or `(min, max)`
                          grid_rtol=0.15,
-                         verbosity=1, # 0 or None for quiet / 1 for info / 2 for full
-                         # Spot detection parameters.
-                         spot_fwhm=5.0,
-                         ball_radius=None,
-                         spot_footprint='spline',
+                         use_minimize_scalar=False,
                          distance_atol=0.0,
                          distance_rtol=0.3,
-                         robust_to_background=False,
-                         background_level=0.0,
-                         detect_level=0.0,
-                         # Settings for the centroids.
-                         centroiding=False,
+                         grid_shape=None, # `None` or `(nrows, ncols)`
+                         # Centers of gravity:
                          centroid_radius=4, # radius of the ROI to compute the centroid
-                         threshold_level=0.0, # hard thresholding level, must be ≥ 0
-                         # Markers used for plotting centroids.
-                         centroidmarker='x',
-                         centroidmarkersize=6.0, # in pt (1 inch = 72 pt)
-                         centroidmarkercolor='gold',
-                         # Markers used for plotting spots.
+                         centroid_threshold=0.0, # hard thresholding level, must be ≥ 0
+                         # Plotting:
+                         fig=None, # `None` to not plot anything
+                         # - Keywords for plotting the grid:
+                         gridcolor='lightgrey', # None to not draw
+                         gridlinewidth=0.3,
+                         # - Markers used for plotting spots:
                          spotmarker='o', # `None` to not draw,
                          spotmarkersize=13.0, # in pt (1 inch = 72 pt)
                          spotmarkercolor='lightgrey',# None to not draw
-                         # keywords for plotting the grid
-                         gridcolor='lightgrey', # None to not draw
-                         gridlinewidth=0.3,
-                         use_minimize_scalar=False):
+                         # - Markers used for plotting centroids:
+                         centroidmarker='x',
+                         centroidmarkersize=6.0, # in pt (1 inch = 72 pt)
+                         centroidmarkercolor='gold'):
     """Detect a Cartesian grid of evenly spaced spots in an image.
 
-    The only argument is the image `img` to process.
+    Positional arguments
+    --------------------
+    The only positional argument is the image `img` acquired by the
+    Shack-Hartmann wavefront sensor (SH-WFS). It is assumed that this images
+    has been correctly pre-processed to compensate for the bias and non-uniform
+    detector response.
 
-    The returned value depends on keyword `centroiding` (described below).
+    Description
+    -----------
+    The algorithm has the following stages:
 
-    All settings are specified by keywords:
+    1. A matched filter (whose shape is driven by keywords `spot_fwhm`,
+       `spot_footprint`, and `robust_to_background`) is applied to the image to
+       enhance the spots and facilitate their detection. The local maxima (in
+       neighborhoods of radius set by keyword `detect_radius`) in the filtered
+       image that are brighter than `detect_level` are considered as detected
+       spots.
 
-    - `grid_step` specifies an initial estimate of the grid step in pixels.
-      Unless this parameter is locked (by setting ``grid_step_bounds =
-      (grid_step, grid_step)``), this grid step is refined (as are the other
-      grid parameters) to best fit the positions of the detected spots.
+    2. The parameters of a Cartesian grid are adjusted to the detected spots so
+       as to minimize the weighted (by the peak value of the spots) mean of the
+       squared distance of the detected spots to the nearest grid node. The
+       initial grid step is given by the value of the keyword `grid_step`, the
+       brightest detected spot is initially considered to sit at a grid node.
+       The optimization strategy consists in first fitting the grid step, then
+       the grid offsets, and finally all these parameters. Spots that are too
+       far from a node (according to the tolerances specified by keywords
+       `distance_atol` and `distance_rtol`) are discarded. If the grid of nodes
+       matched by one of the remaining spots is larger than the shape set by
+       the keyword `grid_shape`, the sub-grid of the requested size that
+       contains the brightest spots (in total) is selected.
 
-    - `grid_step_bounds` specifies the bounds for the grid step. If `None`, the
-      lower bound is given by ``(1 - grid_rtol)*grid_step`` and the upper
-      bound is given by ``(1 + grid_rtol)*grid_step``.
+    3. If keyword `centroiding` is `False` (the default), the algorithm returns
+       with a result `out` that has 3 attributes each a 2-dimensional array of
+       the shape of the grid: ``out.x[i,j]``, ``out.y[i,j]``, and
+       ``out.z[i,j]`` are set with the coordinates and value of the peak of the
+       spot found for grid node ``(i,j)`` or to NaN if no spot is found for
+       this grid node.
 
-    - `grid_rtol` specifies a relative tolerance for the grid geometry. It must
-      be in the open range (0,1). This parameter is used to compute the grid
-      step bounds if `grid_step_bounds` is not specified.
+    4. If keyword `centroiding` is `True`, the centers of gravity of the spots
+       (and their covariances) are computed and returned by the algorithm. The
+       result `out` has 8 attributes which are `n`-vectors (with `n` the number
+       of spots):
 
-    - `grid_shape` specifies the grid shape, as ``(nrows, ncols)``, of the
-      grid. If the "maximal grid" (the grid with all the nodes matching a
-      detected spot) is larger than `grid_shape`, the maximal grid is truncated
-      so as to preserve the brightest spots. If ``grid_shape = None``, the
-      maximal grid is returned.
+       - ``out.i[k]``: row index in the grid of the `k`-th spot;
+       - ``out.j[k]``: column index in the grid of the `k`-th spot;
+       - ``out.x[k]``: abscissa of the center of gravity of the `k`-th spot;
+       - ``out.y[k]``: ordinate of the center of gravity of the `k`-th spot;
+       - ``out.z[k]``: peak value of the `k`-th spot;
+       - ``out.cxx[k]``: variance of `x` for the `k`-th spot;
+       - ``out.cxy[k]``: covariance of `x` and `y` for the `k`-th spot;
+       - ``out.cyy[k]``: variance of `y` for the `k`-th spot.
 
-    - `gridcolor` and `gridlinewidth` specify the settings for plotting the
-      grid. The grid is not plotted if `fig` or `gridcolor` is `None`, or if
-      `gridlinewidth ≤ 0`.
+
+    The peak value is that of the spot in the filtered image. The row index `i`
+    runs along the direction of `y`, while the column index `j` runs along the
+    direction of `x`. Coordinates `x` and `y` are in pixels.
+
+    Returned result
+    ---------------
+    The returned result is a structured object whose attributes depend on
+    keyword `centroiding`.
+
+    Keywords
+    --------
+    General keywords:
+
+    - `centroiding` specifies whether to compute the centers of gravity of the
+      spots and affect the type of the result returned by the algorithm. See
+      above for a description.
+
+    - `verbosity` specifies whether to be quiet (0 or `None`), to print minimal
+      information (1), or more information (2 or more).
+
+    For the filtered image (stage 1.a):
 
     - `spot_fwhm` specifies an estimate of the full-width at half-maximum of
       the spots. This parameter is used to build the detection filter. If
@@ -104,11 +154,38 @@ def detect_grid_of_spots(img, *,
     - `robust_to_background` specifies whether the spot detection filter
       should be insensitive to a local background (bias plus slope).
 
+    - `background_level` specifies the mean background level. This value is
+      used to extrapolate the image when it is correlated with the detection
+      filter.
+
+    For detecting the spots (stage 1.b):
+
+    - `detect_radius` specifies the radius of the local neighborhoods for
+      finding the local maxima.
+
     - `detect_level` specifies the detection threshold for the local maxima in
       the filtered image. The default value is 0. A better threshold is a few
       times the standard deviation of the background noise.
 
-    - `background_level` specifies the mean background level.
+    For fitting the grid (stage 2):
+
+    - `grid_step` specifies an initial estimate of the grid step in pixels.
+      Unless this parameter is locked (by setting ``grid_step_bounds =
+      (grid_step, grid_step)``), this grid step is refined (as are the other
+      grid parameters) to best fit the positions of the detected spots.
+
+    - `grid_step_bounds` specifies the bounds for the grid step. If `None`, the
+      lower bound is given by ``(1 - grid_rtol)*grid_step`` and the upper
+      bound is given by ``(1 + grid_rtol)*grid_step``.
+
+    - `grid_rtol` specifies a relative tolerance for the grid geometry. It must
+      be in the open range (0,1). This parameter is used to compute the grid
+      step bounds if `grid_step_bounds` is not specified.
+
+    - `use_minimize_scalar` specifies whether to use
+      `scipy.optimize.minimize_scalar` to adjust the initial grid step (unless
+      this parameter is locked by the bounds specified in `grid_step_bounds`).
+      If `False` (the default), scipy.optimize.fminbound` is used instead.
 
     - `distance_atol` and `distance_rtol` specify an absolute and relative
       tolerances for the maximal distance between a valid spot and the nearest
@@ -118,47 +195,39 @@ def detect_grid_of_spots(img, *,
       incidence on the spot selection if `distance_rtol` is greater than
       ``sqrt(2)``.
 
-    - `centroiding` specifies whether to compute the centers of gravity of the
-      spots. If `True`, the result `out` has 8 attributes which are `n`-vectors
-      (with `n` the number of spots):
+    - `grid_shape` specifies the grid shape, as ``(nrows, ncols)``, of the
+      grid. If the "maximal grid" (the grid with all the nodes matching a
+      detected spot) is larger than `grid_shape`, the maximal grid is truncated
+      so as to preserve the brightest spots. If ``grid_shape = None``, the
+      maximal grid is returned.
 
-      • ``out.i[k]``: row index in the grid of the `k`-th spot;
-      • ``out.j[k]``: column index in the grid of the `k`-th spot;
-      • ``out.x[k]``: abscissa of the center of gravity of the `k`-th spot;
-      • ``out.y[k]``: ordinate of the center of gravity of the `k`-th spot;
-      • ``out.z[k]``: peak value of the `k`-th spot;
-      • ``out.cxx[k]``: variance of `x` for the `k`-th spot;
-      • ``out.cxy[k]``: covariance of `x` and `y` for the `k`-th spot;
-      • ``out.cyy[k]``: variance of `y` for the `k`-th spot.
-
-      The peak value is that of the spot in the filtered image. The row index
-      `i` runs along the direction of `y` while the column index `j` runs along
-      the direction of `x`. Coordinates `x` and `y` are in pixels.
-
-      If `centroiding is `False` (the default), the result `out` has 3
-      attributes which are 2-dimensional arrays of the shape of the grid:
-      ``out.x[i,j]``, ``out.y[i,j]``, and ``out.z[i,j]`` are set with the
-      coordinates and value of the peak of the spot found for grid node
-      ``(i,j)`` or to NaN if no spot is found for this grid node.
+    For the centers of gravity (stage 4):
 
     - `centroid_radius` specifies the radius of the sliding window used to
       compute the centers of gravity. The width and height of this window are
-      both equal to ``2*centroid_radius + 1``. If specified,
-      ``round(centroid_radius) ≥ 1` must hold. If not specified, then
-      `spot_fwhm` must be specified and ``centroid_radius = max(1,
-      round(spot_fwhm))`` is chosen.
+      both equal to ``2*centroid_radius + 1``. The window is centered at the
+      peak of each detected spot. If specified, ``round(centroid_radius) ≥ 1`
+      must hold. If not specified, then `spot_fwhm` must be specified and
+      ``centroid_radius = max(1, round(spot_fwhm))`` is chosen.
 
-    - `centroidmaker`, `centroidmarkercolor`, and `centroidmarkersize` specify
-      the settings for plotting markers at the positions of detected centroids.
-      Not markers are plotted if `fig` or `centroidmarker` is `None`.
+    - `centroid_threshold` specifies the mean background level. The pixels of the
+      image `img` whose value is lower of equal this level are set to zero for
+      computing the center of gravity. This level shall be non-negative.
 
-    - `verbosity` specifies whether to be quiet (0 or `None`), to print minimal
-      information (1), or many information (2 or more).
+    For plotting:
 
     - `fig` is `None` to plot nothing, otherwise it is a figure number to have
       image being processed shown in figure ``fig``, the filtered image with
       detected spots and grid lines in figure ``fig + 1``, and, if `verbosity ≥
       2`, the image dilation shown in figure ``fig + 2``.
+
+    - `gridcolor` and `gridlinewidth` specify the settings for plotting the
+      grid. The grid is not plotted if `fig` or `gridcolor` is `None`, or if
+      `gridlinewidth ≤ 0`.
+
+    - `centroidmaker`, `centroidmarkercolor`, and `centroidmarkersize` specify
+      the settings for plotting markers at the positions of detected centroids.
+      Not markers are plotted if `fig` or `centroidmarker` is `None`.
 
     - `spotmaker`, `spotmarkercolor`, and `spotmarkersize` specify the settings for
       plotting markers at the positions of detected spots. Not markers are
@@ -178,13 +247,13 @@ def detect_grid_of_spots(img, *,
     grid_step_min, grid_step_max = grid_step_bounds
     if not 2 <= grid_step_min <= grid_step <= grid_step_max:
         raise ValueError('invalid grid step initial value or bounds')
-    if ball_radius is None:
-        ball_radius = min(round(0.7*grid_step_min), grid_step_min - 1) # TODO grid_rtol
-    ball_radius = round(ball_radius)
-    if ball_radius < 1:
-        raise ValueError('`ball_radius` is too small, must be ≥ 1')
-    if ball_radius >= grid_step_min:
-        raise ValueError('`ball_radius` is too large or `gris_step_min` too small')
+    if detect_radius is None:
+        detect_radius = min(round(0.7*grid_step_min), grid_step_min - 1) # TODO grid_rtol
+    detect_radius = round(detect_radius)
+    if detect_radius < 1:
+        raise ValueError('`detect_radius` is too small, must be ≥ 1')
+    if detect_radius >= grid_step_min:
+        raise ValueError('`detect_radius` is too large or `gris_step_min` too small')
     if verbosity is None:
         verbosity = 0
     elif not isinstance(verbosity, int) or verbosity < 0:
@@ -251,8 +320,7 @@ def detect_grid_of_spots(img, *,
         plt.colorbar(location='right')
 
     # Find the local maxima of the "detection map".
-    ball = ball_2d_window(ball_radius)
-    lmax = scipy.ndimage.grey_dilation(flt, footprint=ball)
+    lmax = scipy.ndimage.grey_dilation(flt, footprint=ball_2d_window(detect_radius))
     if fig is not None and verbosity > 1:
         plt.figure(fig + 2)
         plt.clf()
@@ -262,12 +330,12 @@ def detect_grid_of_spots(img, *,
 
     # Boolean mask true at location of positive local maxima.
     cond = (flt == lmax) & (flt > detect_level)
-    if ball_radius > 0:
+    if detect_radius > 0:
         # Discard local maxima too close to the image boundaries.
-        cond[:ball_radius, :] = False
-        cond[:, :ball_radius] = False
-        cond[-ball_radius:, :] = False
-        cond[:, -ball_radius:] = False
+        cond[:detect_radius, :] = False
+        cond[:, :detect_radius] = False
+        cond[-detect_radius:, :] = False
+        cond[:, -detect_radius:] = False
 
     # Extract characteristics of local maxima: their coordinates (x,y) and their
     # intensity z.
@@ -488,7 +556,7 @@ def detect_grid_of_spots(img, *,
         # Extract the ROI in the image and apply a hard thresholding and a
         # mask.
         roi.center_at(x, y)
-        roi_z = roi_w*np.maximum(roi(img), threshold_level)
+        roi_z = roi_w*np.maximum(roi(img), centroid_threshold)
 
         # Compute the center of gravity in the ROI and register it.
         dx, dy, cxx, cxy, cyy = center_of_gravity(roi_z, roi_x, roi_y, covariance=True)
