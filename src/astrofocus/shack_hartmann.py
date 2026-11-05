@@ -18,14 +18,8 @@ from .utils import Result, vector_like_length
 #
 # NOTE Markers can be UTF8 symbol like '$\u20DD$',  '$\u20DE$' '$\u20DF$'.
 #
-# NOTE detection threshold can be based on the RMS of the background.
-# Two possibilities to reduce the number of false positive:
-# - increase the value of the detection threshold `detect_level`
-# - increase the radius of the local neighborhood `detect_radius`
-#
 # TODO have a single parameter grid_rtol to tune the tolerance relative
 #      to the step which accounts for:
-#      - how much the grid step can vary (grid_step_bounds)
 #      - how far from a grid node can be a spot
 
 def detect_grid_of_spots(img, *,
@@ -232,6 +226,30 @@ def detect_grid_of_spots(img, *,
     - `spotmaker`, `spotmarkercolor`, and `spotmarkersize` specify the settings for
       plotting markers at the positions of detected spots. Not markers are
       plotted if `fig` or `spotmarker` is `None`.
+
+    Usage
+    -----
+
+    The algorithm is designed to be robust but its behavior depends on the
+    correct settings of a few parameters.
+
+    The most important settings are `grid_step`, `grid_shape`, and `spot_fwhm`
+    (and/or `centroid_radius`). These parameters depends on the considered
+    wavefront sensor and shall not depend on the observed source or acquisition
+    conditions.
+
+    Different possibilities to reduce the number of false positive (in stages 1
+    and 2):
+
+    - Increase the radius of the local neighborhood set by `detect_radius`
+      to reduce the number of possible local maxima.
+
+    - Increase the value of the detection threshold `detect_level` to discard
+      to faint spots. This level may be set to a few times the standard
+      deviation of the background noise.
+
+    - Reduces the tolerances `distance_atol` and/or `distance_rtol` to
+      discard spots that are too far from a node of the grid.
 
     """
     # Set default parameters.
