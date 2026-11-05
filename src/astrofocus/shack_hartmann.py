@@ -50,8 +50,8 @@ def detect_grid_of_spots(img, *,
                          threshold_level=0.0, # hard thresholding level, must be ≥ 0
                          # Markers used for plotting centroids.
                          centroidmarker='x',
-                         centroidmarkersize=7.0, # in pt (1 inch = 72 pt)
-                         centroidmarkercolor='magenta',
+                         centroidmarkersize=6.0, # in pt (1 inch = 72 pt)
+                         centroidmarkercolor='gold',
                          # Markers used for plotting spots.
                          spotmarker='o', # `None` to not draw,
                          spotmarkersize=13.0, # in pt (1 inch = 72 pt)
