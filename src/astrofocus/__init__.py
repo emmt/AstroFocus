@@ -23,6 +23,8 @@ from .utils import fftshift, ifftshift, fft, ifft
 from .utils import abs2, normalize, zeropad
 from .utils import DtD
 from .utils import outer_sum, outer_diff, outer_prod
+from .utils import Result
+from .utils import is_vector_like, vector_like_length
 
 from numpy import conj
 

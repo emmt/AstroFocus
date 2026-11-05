@@ -169,3 +169,25 @@ def outer_prod(a, *args):
         b = np.asarray(b)
         a = a.reshape(a.shape + (1,)*b.ndim) * b
     return a
+
+class Result(object):
+    """Simple object to store anything as attributes.
+
+    An object of this class is created by calling the constructor with any
+    number of keywords corresponding to the object initial attributes.
+
+    """
+    def __init__(self, **kwds):
+        for (key, val) in kwds.items():
+            setattr(self, key, val)
+
+def is_vector_like(x):
+    """Return whether `x` is a vector like object."""
+    return isinstance(x, (list, tuple)) or isinstance(x, np.ndarray) and x.ndim == 1
+
+def vector_like_length(x):
+    """Return the number of entries of `x` if it is a vector like object, -1
+    otherwise."""
+    if isinstance(x, (list, tuple)) or isinstance(x, np.ndarray) and x.ndim == 1:
+        return len(x)
+    return -1
