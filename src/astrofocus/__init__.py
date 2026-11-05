@@ -4,8 +4,8 @@ from .fits import readfits, writefits
 
 from .centroids import center_of_gravity, fix_weights, invert_2x2_symmetric_matrix
 
-from .chamferdistance import ChamferDistanceToGrid
-from .chamferdistance import offset_to_nearest_grid_node, index_of_nearest_grid_node
+from .metrics import ChamferDistanceToGrid
+from .metrics import offset_to_nearest_grid_node, index_of_nearest_grid_node
 
 from .filters import ball_2d_window
 from .filters import GAUSSIAN_FWHM, gaussian_1d_filter, gaussian_2d_filter
@@ -15,7 +15,7 @@ from .images import ImageROI
 
 from .onlinestats import SampleStatistics
 
-from .optim.conjgrad import conjgrad
+from .optim import conjgrad
 
 from .utils import include
 from .utils import rand, randn

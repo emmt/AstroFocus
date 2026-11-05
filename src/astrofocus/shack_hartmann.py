@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .centroids import center_of_gravity
-from .chamferdistance import ChamferDistanceToGrid
+from .metrics import ChamferDistanceToGrid
 from .filters import gaussian_2d_filter, cubic_bspline_2d_filter, ball_2d_window
 from .images import ImageROI
 from .utils import Result, vector_like_length
