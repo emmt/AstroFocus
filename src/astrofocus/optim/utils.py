@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import numpy as np # to deal with numerical arrays
 
-def inner(x,y):
-    """Compute inner product of X and Y regardless their shapes
-        (their number of elements must however match)."""
-    return np.inner(x.ravel(),y.ravel())
+def inner(x, y):
+    """Compute inner product of `x` and `y` regardless their shapes
+       (their number of elements must however match)."""
+    return np.inner(x.ravel(), y.ravel())

@@ -3,3 +3,4 @@
 """Numerical optimization methods."""
 
 from .conjgrad import conjgrad
+from .utils import inner

@@ -51,7 +51,7 @@ def center_of_gravity(w, x, y, *, covariance=False, gamma=None, sigma=None):
     independent noise (i.e. not the photon noise). This keyword is ignored if
     `covariance` is `False`.
 
-    You may call ``centroids.invert_2x2_symmetric_matrix(cxx, cxy, cyy)`` to
+    You may call ``astrofocus.invert_2x2_symmetric_matrix(cxx, cxy, cyy)`` to
     compute the precision matrix of the center of gravity.
 
     """
@@ -108,17 +108,6 @@ def center_of_gravity(w, x, y, *, covariance=False, gamma=None, sigma=None):
 
     # Return the centroid coordinates and their covariance.
     return (xc, yc, cxx, cxy, cyy)
-
-def invert_2x2_symmetric_matrix(a_11, a_12, a_22):
-    """Invert a 2×2 symmetric matrix.
-
-    Return a 3-tuple ``(b_11, b_12, b_22)`` such that
-    ``B = [[b_11, b_12], [b_12, b_22]]`` is the inverse of
-    ``A = [[a_11, a_12], [a_12, a_22]]``.
-
-    """
-    den = a_11*a_22 - a_12**2
-    return a_22/den, -a_12/den, a_11/den
 
 def _bench0(n=10000000):
     t0 = time.time()

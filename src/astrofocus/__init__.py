@@ -2,7 +2,10 @@
 
 from .fits import readfits, writefits
 
-from .centroids import center_of_gravity, fix_weights, invert_2x2_symmetric_matrix
+from .linalg import invert_2x2_matrix, invert_2x2_symmetric_matrix
+from .linalg import invert_3x3_matrix, invert_3x3_symmetric_matrix
+
+from .centroids import center_of_gravity, fix_weights
 
 from .metrics import ChamferDistanceToGrid
 from .metrics import offset_to_nearest_grid_node, index_of_nearest_grid_node
