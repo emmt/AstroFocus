@@ -673,3 +673,90 @@ def detect_grid_of_spots(img, *,
 
     return ShackHartmannData(i=cog_i, j=cog_j, x=cog_x, y=cog_y, z=cog_z,
                              cxx=cog_cxx, cxy=cog_cxy, cyy=cog_cyy)
+
+class ShackHartmannWeighting:
+    """Shack-Hartmann weighting operator.
+
+    The weighting operator is created by:
+
+    ``wgt = ShackHartmannWeighting(cxx, cxy, cyy)``
+
+    with `cxx` the variances of the `x` slopes, `cxy` the covariances of the `x` and `y`
+    slopes, and `cyy` the variances of the `y` slopes.
+
+    The object ``wgt`` is callable, ``wgt(xy)``, with `xy` a 2 × n array `xy`, returns the
+    dot product of the weighting matrix by `xy` (n is the number of slopes).
+
+    """
+    def __init__(self, cxx, cxy, cyy):
+        wxx, wxy, wyy = invert_2x2_symmetric_matrix(cxx, cxy, cyy)
+        self.wxx = wxx
+        self.wxy = wxy
+        self.wyy = wyy
+        io_shape = (2,) + wxx.shape
+        self.input_shape = io_shape
+        self.output_shape = io_shape
+
+    def __call__(self, xy, adj=False):
+        xy = np.asarray(xy)
+        assert xy.shape == self.input_shape
+        x = xy[0,:]
+        y = xy[1,:]
+        return np.vstack((self.wxx*x + self.wxy*y,
+                          self.wxy*x + self.wyy*y))
+
+class ShackHartmannModel:
+    """A simple Shack-Hartmann model.
+
+    Calling the object as ``wfs(w)`` or ``wfs(w,False)`` with a 2-dimensional wavefront `w`
+    yields a 2 × n array of slopes. Calling the object as ``wfs(xy,True)`` with a 2 × n
+    array `xy` yields the result of applying the adjoint of the model.
+
+    """
+    def __init__(self, mask):
+        mask = np.asarray(mask)
+        if mask.ndim != 2:
+            raise ValueError('expecting a 2-dimensional mask')
+        if mask.dtype is not np.dtype('bool'):
+            mask = mask != False
+        i, j = np.nonzero(mask) # row and column indices of valid sub-pupils
+        n = len(i) # number of sub-pupils
+        assert len(j) == n
+        nrows, ncols = mask.shape
+        self.input_shape = (nrows + 1, ncols + 1)
+        self.output_shape = (2, n)
+        self.i = i # for the record
+        self.j = j # for the record
+        stride = ncols + 1 # stride is number of columns in input wavefront
+        k = stride*i + j # 1-dimensional index of non-zeros
+        self.k11 = k
+        self.k12 = k + 1
+        self.k21 = k + stride
+        self.k22 = k + (stride + 1)
+
+    def __call__(self, arg, adj=False):
+        if adj:
+            # Apply the adjoint of the model operator.
+            assert arg.shape == self.output_shape
+            nrows, ncols = self.input_shape
+            n = nrows*ncols
+            sx = arg[0,:]
+            sy = arg[1,:]
+            u = (sx + sy)/2
+            v = (sx - sy)/2
+            return (np.bincount(self.k22, u, minlength=n) -
+                    np.bincount(self.k11, u, minlength=n) +
+                    np.bincount(self.k12, v, minlength=n) -
+                    np.bincount(self.k21, v, minlength=n)).reshape(self.input_shape)
+        else:
+            # Apply the model operator.
+            assert arg.shape == self.input_shape
+            w = arg.ravel()
+            w11 = w[self.k11]
+            w12 = w[self.k12]
+            w21 = w[self.k21]
+            w22 = w[self.k22]
+            out = np.empty(self.output_shape, float)
+            out[0,:] = (w12 - w11) + (w22 - w21)
+            out[1,:] = (w21 - w11) + (w22 - w12)
+        return out/2
