@@ -28,10 +28,12 @@ from .utils import DtD
 from .utils import outer_sum, outer_diff, outer_prod
 from .utils import Result
 from .utils import is_vector_like, vector_like_length
+from .utils import scaled_range, demeaned_range
 
-from .shack_hartmann import detect_grid_of_spots
+from .shack_hartmann import detect_grid_of_spots, tip_tilt_modes
 from .shack_hartmann import ShackHartmannGrid, ShackHartmannData
 from .shack_hartmann import ShackHartmannModel, ShackHartmannWeighting
+from .shack_hartmann import ShackHartmannDataCost
 
 from numpy import conj
 

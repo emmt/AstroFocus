@@ -12,7 +12,9 @@ from .centroids import center_of_gravity
 from .metrics import ChamferDistanceToGrid
 from .filters import gaussian_2d_filter, cubic_bspline_2d_filter, ball_2d_window
 from .images import ImageROI
-from .utils import Result, vector_like_length
+from .utils import vector_like_length, DtD, demeaned_range
+from .linalg import invert_2x2_symmetric_matrix
+from .optim import conjgrad, inner
 
 class ShackHartmannGrid:
     """Shack-Hartmann grid.
@@ -84,9 +86,9 @@ class ShackHartmannData:
     - `.x`: n-vector of center of gravity abscissae.
     - `.y`: n-vector of center of gravity ordinates.
     - `.z`: n-vector of spot intensity.
-    - `.cxx`: n-vector of variance of `x`.
-    - `.cxy`: n-vector of covariance of `x` and `y`.
-    - `.cyy`: n-vector of variance of `y`.
+    - `.cxx`: n-vector of variances of `x`.
+    - `.cxy`: n-vector of covariances of `x` and `y`.
+    - `.cyy`: n-vector of variances of `y`.
 
     The spot intensity is given by the peak value of the spot in the filtered
     image of the wavefront sensor. The row index `i` runs along the direction
@@ -681,11 +683,12 @@ class ShackHartmannWeighting:
 
     ``wgt = ShackHartmannWeighting(cxx, cxy, cyy)``
 
-    with `cxx` the variances of the `x` slopes, `cxy` the covariances of the `x` and `y`
-    slopes, and `cyy` the variances of the `y` slopes.
+    with `cxx` the variances of the `x` slopes, `cxy` the covariances of the
+    `x` and `y` slopes, and `cyy` the variances of the `y` slopes.
 
-    The object ``wgt`` is callable, ``wgt(xy)``, with `xy` a 2 × n array `xy`, returns the
-    dot product of the weighting matrix by `xy` (n is the number of slopes).
+    The object ``wgt`` is callable, ``wgt(xy)``, with `xy` a 2 × n array `xy`,
+    returns the dot product of the weighting matrix by `xy` (n is the number of
+    slopes).
 
     """
     def __init__(self, cxx, cxy, cyy):
@@ -706,11 +709,12 @@ class ShackHartmannWeighting:
                           self.wxy*x + self.wyy*y))
 
 class ShackHartmannModel:
-    """A simple Shack-Hartmann model.
+    """Simple Shack-Hartmann model.
 
-    Calling the object as ``wfs(w)`` or ``wfs(w,False)`` with a 2-dimensional wavefront `w`
-    yields a 2 × n array of slopes. Calling the object as ``wfs(xy,True)`` with a 2 × n
-    array `xy` yields the result of applying the adjoint of the model.
+    Calling the object as ``wfs(w)`` or ``wfs(w, False)`` with a 2-dimensional
+    wavefront `w` yields a 2 × n array of slopes. Calling the object as
+    ``wfs(xy, True)`` with a 2 × n array `xy` yields the result of applying the
+    adjoint of the model to `xy`.
 
     """
     def __init__(self, mask):
@@ -718,7 +722,7 @@ class ShackHartmannModel:
         if mask.ndim != 2:
             raise ValueError('expecting a 2-dimensional mask')
         if mask.dtype is not np.dtype('bool'):
-            mask = mask != False
+            mask = mask.astype(bool)
         i, j = np.nonzero(mask) # row and column indices of valid sub-pupils
         n = len(i) # number of sub-pupils
         assert len(j) == n
@@ -748,15 +752,128 @@ class ShackHartmannModel:
                     np.bincount(self.k11, u, minlength=n) +
                     np.bincount(self.k12, v, minlength=n) -
                     np.bincount(self.k21, v, minlength=n)).reshape(self.input_shape)
-        else:
-            # Apply the model operator.
-            assert arg.shape == self.input_shape
-            w = arg.ravel()
-            w11 = w[self.k11]
-            w12 = w[self.k12]
-            w21 = w[self.k21]
-            w22 = w[self.k22]
-            out = np.empty(self.output_shape, float)
-            out[0,:] = (w12 - w11) + (w22 - w21)
-            out[1,:] = (w21 - w11) + (w22 - w12)
+
+        # Apply the model operator.
+        assert arg.shape == self.input_shape
+        w = arg.ravel()
+        w11 = w[self.k11]
+        w12 = w[self.k12]
+        w21 = w[self.k21]
+        w22 = w[self.k22]
+        out = np.empty(self.output_shape, float)
+        out[0,:] = (w12 - w11) + (w22 - w21)
+        out[1,:] = (w21 - w11) + (w22 - w12)
         return out/2
+
+class ShackHartmannDataCost:
+    """Cost function of Shack-Hartmann data.
+
+    The object is created given Shack-Hartmann data.
+
+    Attributes:
+
+    - `.mask` the pupil mask.
+    - `.wfs` the wavefront sensor model.
+    - `.wgt` the precision matrix (weights) of the measured slopes.
+    - `.data` the measured slopes.
+    - `.tip_tilt_modes` the tilt-tilt modes.
+    - `.tip_tilt_coefs` the tilt-tilt coefficients.
+
+    """
+    def __init__(self, data):
+        if not isinstance(data, ShackHartmannData):
+            raise TypeError('argument must be Shack-Hartmann data')
+
+        # Build the mask representing the pupil seen by the WFS.
+        nrows = data.i.ptp() + 1
+        ncols = data.j.ptp() + 1
+        mask = np.zeros((nrows, ncols), bool)
+        mask[data.i, data.j] = True
+        self.mask = mask
+
+        # Create WFS model, weights, and slope data.
+        self.wfs = ShackHartmannModel(mask)
+        self.wgt = ShackHartmannWeighting(data.cxx, data.cxy, data.cyy)
+        self.data = np.vstack((data.x, data.y)) # the slope data
+
+        # Tip-tilt modes and coefficients.
+        self.tip_tilt_modes = tip_tilt_modes(self.wfs.input_shape)
+        self.tip_tilt_coefs = (0.0, 0.0)
+
+    def fit_tip_tilt(self):
+        """Fit the tip-tilt and remove it from the stored data.
+
+        This operation is done in-place, the content of the object is
+        modified.
+
+        """
+        wfs = self.wfs # model of the wavefront sensor
+        wgt = self.wgt # weighting matrix
+        w1, w2 = self.tip_tilt_modes
+        h1 = wfs(w1) # the tip as seen by the wavefront sensor
+        h2 = wfs(w2) # the tilt as seen by the wavefront sensor
+
+        # Compute the coefficients (a11, a12, a21, a22) of the inverse of the LHS
+        # matrix of the normal equations for the tip-tilt.
+        wgt_h1 = wgt(h1)
+        wgt_h2 = wgt(h2)
+        a11, a21, a22 = invert_2x2_symmetric_matrix(
+            inner(h1, wgt_h1), inner(h1, wgt_h2), inner(h2, wgt_h2))
+        a12 = a21 # the LHS matrix is symmetric
+
+        # Compute the coefficients (b1, b2) of the RHS vector of the normal
+        # equations for the tip-tilt.
+        b1 = inner(self.data, wgt_h1)
+        b2 = inner(self.data, wgt_h2)
+
+        # Solution of the normal equations for the tip-tilt.
+        c1 = a11*b1 + a12*b2
+        c2 = a21*b1 + a22*b2
+        print(f'Tip-tilt = ({c1}, {c2})')
+
+        # Remove the tip-tilt from the measured slopes.
+        self.data -= (c1*h1 + c2*h2)
+
+        # Update the tip-tilt coefficients.
+        self.tip_tilt_coefs = (self.tip_tilt_coefs[0] + c1,
+                               self.tip_tilt_coefs[1] + c2)
+
+    def fit_wavefront(self, *, maxiter=300, mu=1):
+        """Reconstruct the wavefront (with no lower modes if removed) by the
+        conjugate gradient method.
+
+        """
+        wfs = self.wfs
+        wgt = self.wgt
+        A = lambda x: wfs(wgt(wfs(x)), True) + mu*DtD(x)
+        b = wfs(wgt(self.data), True)
+        return conjgrad(A, b, maxiter=maxiter)
+
+def tip_tilt_modes(arg, scale=1):
+    """Return the tip-tilt modes for a given pupil shape or mask.
+
+    The tip-tilt modes are given for the entire shape of the mask, their means
+    on the mask is zero.
+
+    """
+    if isinstance(arg, tuple):
+        # Argument must be pupil shape.
+        shape = arg
+        if len(shape) == 2:
+            m, n = shape
+            if isinstance(m, int) and isinstance(n, int):
+                wx = np.broadcast_to(demeaned_range(n, scale).reshape((1, n)), shape)
+                wy = np.broadcast_to(demeaned_range(m, scale).reshape((m, 1)), shape)
+                return (wx, wy)
+    else:
+        # Argument must be pupil mask.
+        mask = np.asarray(arg)
+        if mask.ndim == 2 and mask.dtype is np.dtype('bool'):
+            m, n = mask.shape
+            wx = np.broadcast_to(scaled_range(n, scale).reshape((1, n)), shape)
+            wy = np.broadcast_to(scaled_range(m, scale).reshape((m, 1)), shape)
+            return (wx - (mask*wx).mean(),
+                    wy - (mask*wy).mean())
+
+    # Anything else is an error.
+    raise ValueError('expecting 2-dimensional shape or Boolean mask')

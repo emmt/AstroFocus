@@ -191,3 +191,19 @@ def vector_like_length(x):
     if isinstance(x, (list, tuple)) or isinstance(x, np.ndarray) and x.ndim == 1:
         return len(x)
     return -1
+
+def scaled_range(n, scale=1):
+    """Return a vector whose entry at index `i` is ``i*scale``."""
+    r = np.array(range(n))
+    if scale == 1:
+        return r
+    return r*scale
+
+def demeaned_range(n, scale=1):
+    """Return a vector whose entry at index `i` is ``bias + i*scale`` with
+    `bias` such that the result has zero-mean."""
+    r = np.array(range(n))
+    r = r - (n - 1)/2 # demeaned range
+    if scale == 1:
+        return r
+    return r*scale
