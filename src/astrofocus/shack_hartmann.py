@@ -14,6 +14,101 @@ from .filters import gaussian_2d_filter, cubic_bspline_2d_filter, ball_2d_window
 from .images import ImageROI
 from .utils import Result, vector_like_length
 
+class ShackHartmannGrid:
+    """Shack-Hartmann grid.
+
+    Mandatory attributes are:
+
+    - `.step` the spacing oth grid nodes (in pixels).
+
+    - `.origin` the coordinates of the first grid node (in pixels).
+
+    - `.x`, `.y`, and `.z`, each a 2-dimensional array of the shape of the
+      grid: ``.x[i,j]``, ``.y[i,j]``, and ``.z[i,j]`` are the coordinates and
+      value of the peak of the spot found for grid node ``(i,j)`` or to NaN if
+      no spot is found for this grid node.
+
+    The peak value is that of the spot in the filtered image of the wavefront
+    sensor. The row index `i` runs along the direction of `y`, while the column
+    index `j` runs along the direction of `x`. Coordinates `x` and `y` are in
+    pixels.
+
+    """
+    def __init__(self, *, x, y, z, step, origin, **kwds):
+        # Check and set mandatory attributes.
+        x = np.asarray(x)
+        shape = x.shape
+        if len(shape) != 2:
+            raise ValueError('x, y, and z must be 2-dimensional arrays')
+        y = np.asarray(y)
+        z = np.asarray(z)
+        if not y.shape == z.shape == shape:
+            raise ValueError('x, y, and z must have the same shape')
+        self.x = x
+        self.y = y
+        self.z = z
+        self.shape = shape
+        self.step = step
+        self.origin = origin
+
+        # Optional attributes.
+        for (key, val) in kwds.items():
+            setattr(self, key, val)
+
+    def __repr__(self):
+        fix = lambda x: round(x, 3)
+        xorg, yorg = map(fix, self.origin)
+        step = fix(self.step)
+        nrows, ncols = self.shape
+        n = self.count_number_of_valid_nodes()
+        return (f'ShackHartmannGrid(step={step}, origin=({xorg}, {yorg}), ...)\n' +
+                f'with {nrows} row(s), {ncols} column(s), and {n} valid nodes')
+
+    def mask_of_valid_nodes(self):
+        """Return the mask of the valid nodes."""
+        return np.logical_not(np.isnan(self.z))
+
+    def count_number_of_valid_nodes(self):
+        """Return the number of valid nodes."""
+        return np.count_nonzero(self.mask_of_valid_nodes())
+
+class ShackHartmannData:
+    """Shack-Hartmann data.
+
+    The object is created given Shack-Hartmann data.
+
+    Mandatory attributes (n is the number of measured slopes):
+
+    - `.i`: n-vector of row indices in WFS grid.
+    - `.j`: n-vector of column indices in WFS grid.
+    - `.x`: n-vector of center of gravity abscissae.
+    - `.y`: n-vector of center of gravity ordinates.
+    - `.z`: n-vector of spot intensity.
+    - `.cxx`: n-vector of variance of `x`.
+    - `.cxy`: n-vector of covariance of `x` and `y`.
+    - `.cyy`: n-vector of variance of `y`.
+
+    The spot intensity is given by the peak value of the spot in the filtered
+    image of the wavefront sensor. The row index `i` runs along the direction
+    of `y`, while the column index `j` runs along the direction of `x`.
+    Coordinates `x` and `y` are in pixels.
+
+    """
+    def __init__(self, *, i, j, x, y, z, cxx, cxy, cyy, **kwds):
+        # Mandatory attributes.
+        self.i = i
+        self.j = j
+        self.x = x
+        self.y = y
+        self.z = z
+        self.cxx = cxx
+        self.cxy = cxy
+        self.cyy = cyy
+
+        # Optional attributes.
+        for (key, val) in kwds.items():
+            setattr(self, key, val)
+
 # TODO add fitting the spot FWHM
 #
 # NOTE Markers can be UTF8 symbol like '$\u20DD$',  '$\u20DE$' '$\u20DF$'.
@@ -92,35 +187,16 @@ def detect_grid_of_spots(img, *,
        contains the brightest spots (in total) is selected.
 
     3. If keyword `centroiding` is `False` (the default), the algorithm returns
-       with a result `out` that has 3 attributes each a 2-dimensional array of
-       the shape of the grid: ``out.x[i,j]``, ``out.y[i,j]``, and
-       ``out.z[i,j]`` are set with the coordinates and value of the peak of the
-       spot found for grid node ``(i,j)`` or to NaN if no spot is found for
-       this grid node.
+       an instance of `ShackHartmannGrid` representing the grid geometry.
 
     4. If keyword `centroiding` is `True`, the centers of gravity of the spots
-       (and their covariances) are computed and returned by the algorithm. The
-       result `out` has 8 attributes which are `n`-vectors (with `n` the number
-       of spots):
-
-       - ``out.i[k]``: row index in the grid of the `k`-th spot;
-       - ``out.j[k]``: column index in the grid of the `k`-th spot;
-       - ``out.x[k]``: abscissa of the center of gravity of the `k`-th spot;
-       - ``out.y[k]``: ordinate of the center of gravity of the `k`-th spot;
-       - ``out.z[k]``: peak value of the `k`-th spot;
-       - ``out.cxx[k]``: variance of `x` for the `k`-th spot;
-       - ``out.cxy[k]``: covariance of `x` and `y` for the `k`-th spot;
-       - ``out.cyy[k]``: variance of `y` for the `k`-th spot.
-
-
-    The peak value is that of the spot in the filtered image. The row index `i`
-    runs along the direction of `y`, while the column index `j` runs along the
-    direction of `x`. Coordinates `x` and `y` are in pixels.
+       (and their covariances) are computed and the algorithm returns an
+       instance of `ShackHartmannData` representing the measurements.
 
     Returned result
     ---------------
-    The returned result is a structured object whose attributes depend on
-    keyword `centroiding`.
+    The returned result is a structured object whose content depend on keyword
+    `centroiding`.
 
     Keywords
     --------
@@ -204,9 +280,9 @@ def detect_grid_of_spots(img, *,
       must hold. If not specified, then `spot_fwhm` must be specified and
       ``centroid_radius = max(1, round(spot_fwhm))`` is chosen.
 
-    - `centroid_threshold` specifies the mean background level. The pixels of the
-      image `img` whose value is lower of equal this level are set to zero for
-      computing the center of gravity. This level shall be non-negative.
+    - `centroid_threshold` specifies the mean background level. The pixels of
+      the image `img` whose value is lower of equal this level are set to zero
+      for computing the center of gravity. This level shall be non-negative.
 
     For plotting:
 
@@ -223,8 +299,8 @@ def detect_grid_of_spots(img, *,
       the settings for plotting markers at the positions of detected centroids.
       Not markers are plotted if `fig` or `centroidmarker` is `None`.
 
-    - `spotmaker`, `spotmarkercolor`, and `spotmarkersize` specify the settings for
-      plotting markers at the positions of detected spots. Not markers are
+    - `spotmaker`, `spotmarkercolor`, and `spotmarkersize` specify the settings
+      for plotting markers at the positions of detected spots. Not markers are
       plotted if `fig` or `spotmarker` is `None`.
 
     Usage
@@ -542,7 +618,8 @@ def detect_grid_of_spots(img, *,
             grid_x[cond] = NaN
             grid_y[cond] = NaN
             grid_z[cond] = NaN
-        return Result(x=grid_x, y=grid_y, z=grid_z)
+        return ShackHartmannGrid(x=grid_x, y=grid_y, z=grid_z,
+                                 step=step, origin=(xoff,yoff))
 
     # Compute the center of gravity of all valid spots.
     cond = grid_z > detect_level
@@ -594,5 +671,5 @@ def detect_grid_of_spots(img, *,
                  markersize=centroidmarkersize,
                  markeredgecolor=centroidmarkercolor)
 
-    return Result(i=cog_i, j=cog_j, x=cog_x, y=cog_y, z=cog_z,
-                  cxx=cog_cxx, cxy=cog_cxy, cyy=cog_cyy)
+    return ShackHartmannData(i=cog_i, j=cog_j, x=cog_x, y=cog_y, z=cog_z,
+                             cxx=cog_cxx, cxy=cog_cxy, cyy=cog_cyy)

@@ -30,6 +30,7 @@ from .utils import Result
 from .utils import is_vector_like, vector_like_length
 
 from .shack_hartmann import detect_grid_of_spots
+from .shack_hartmann import ShackHartmannGrid, ShackHartmannData
 
 from numpy import conj
 
