@@ -515,17 +515,39 @@ def detect_grid_of_spots(img, *,
     max_distance = max(distance_atol, distance_rtol*step)
     if max_distance < np.sqrt(2)*step:
         cond = ((xoff + peaks_j*step - peaks_x)**2 +
-                (yoff + peaks_i*step - peaks_y)**2
-                <= max_distance**2)
-        n = np.count_nonzero(cond)
-        npeaks = len(cond)
+                (yoff + peaks_i*step - peaks_y)**2 <= max_distance**2)
         if verbosity > 0:
+            n0 = len(cond)
+            n1 = np.count_nonzero(cond)
             print(f'\nApply distance ≤ {fix(max_distance)} pixels criterion:')
-            if n < npeaks:
-                print(f'  -> {npeaks - n} spot(s) out of {npeaks} are too far from the grid.')
+            if n1 < n0:
+                print(f'  {n0 - n1} spot(s) out of {n0} are too far from the grid.')
             else:
-                print(f'  -> All {npeaks} spot(s) are close enough to the grid.')
-        if n < npeaks:
+                print(f'  All {n0} spot(s) are close enough to the grid.')
+        if not cond.all():
+            peaks_i = peaks_i[cond]
+            peaks_j = peaks_j[cond]
+            peaks_x = peaks_x[cond]
+            peaks_y = peaks_y[cond]
+            peaks_z = peaks_z[cond]
+
+    # If centroiding, reject spots closer to the image edge than the window
+    # used for the center of gravity.
+    if centroiding and centroid_radius >= 1:
+        image_height, image_width = img.shape
+        cond = ((centroid_radius <= peaks_x) &
+                (peaks_x < image_width  - centroid_radius) &
+                (centroid_radius <= peaks_y) &
+                (peaks_y < image_height - centroid_radius))
+        if verbosity > 0:
+            n0 = len(cond)
+            n1 = np.count_nonzero(cond)
+            print(f'\nApply distance to image edges ≥ {centroid_radius} pixels criterion:')
+            if n1 < n0:
+                print(f'  {n0 - n1} spot(s) out of {n0} are too close to the image edges.')
+            else:
+                print(f'  All {n0} spot(s) are far enough from the image edges.')
+        if not cond.all():
             peaks_i = peaks_i[cond]
             peaks_j = peaks_j[cond]
             peaks_x = peaks_x[cond]
@@ -614,6 +636,7 @@ def detect_grid_of_spots(img, *,
             x = xoff + j*step
             plt.plot([x, x], [ymin, ymax], color=gridcolor, linewidth=gridlinewidth)
 
+    # If not centroiding, return the grid model.
     if not centroiding:
         cond = grid_z <= detect_level
         if cond.any():
@@ -635,10 +658,6 @@ def detect_grid_of_spots(img, *,
     cog_cxx = np.empty(n, float)
     cog_cxy = np.empty(n, float)
     cog_cyy = np.empty(n, float)
-
-    # FIXME eliminate spots closer to the image edge than the window used for
-    #       the center of gravity
-    #
 
     # Coordinates in the ROI relative to center.
     coords = np.array(range(-centroid_radius, centroid_radius + 1)).astype(float)
