@@ -111,13 +111,13 @@ class ShackHartmannData:
         for (key, val) in kwds.items():
             setattr(self, key, val)
 
+    def cost(self):
+        """Return the cost function associated with the data."""
+        return ShackHartmannDataCost(self)
+
 # TODO add fitting the spot FWHM
 #
 # NOTE Markers can be UTF8 symbol like '$\u20DD$',  '$\u20DE$' '$\u20DF$'.
-#
-# TODO have a single parameter grid_rtol to tune the tolerance relative
-#      to the step which accounts for:
-#      - how far from a grid node can be a spot
 
 def detect_grid_of_spots(img, *,
                          # General keywords:
@@ -848,7 +848,7 @@ class ShackHartmannDataCost:
         # Solution of the normal equations for the tip-tilt.
         c1 = a11*b1 + a12*b2
         c2 = a21*b1 + a22*b2
-        print(f'Tip-tilt = ({c1}, {c2})')
+        print(f'Tip-tilt = ({c1}, {c2}) pixels')
 
         # Remove the tip-tilt from the measured slopes.
         self.data -= (c1*h1 + c2*h2)
