@@ -36,7 +36,7 @@ class ShackHartmannGrid:
     pixels.
 
     """
-    def __init__(self, *, x, y, z, step, origin, **kwds):
+    def __init__(self, *, x, y, z, step, origin, options={}, **kwds):
         # Check and set mandatory attributes.
         x = np.asarray(x)
         shape = x.shape
@@ -53,7 +53,8 @@ class ShackHartmannGrid:
         self.step = step
         self.origin = origin
 
-        # Optional attributes.
+        # Optional and extra. attributes.
+        self.options = options
         for (key, val) in kwds.items():
             setattr(self, key, val)
 
@@ -96,7 +97,7 @@ class ShackHartmannData:
     Coordinates `x` and `y` are in pixels.
 
     """
-    def __init__(self, *, i, j, x, y, z, cxx, cxy, cyy, **kwds):
+    def __init__(self, *, i, j, x, y, z, cxx, cxy, cyy, options={}, **kwds):
         # Mandatory attributes.
         self.i = i
         self.j = j
@@ -107,7 +108,8 @@ class ShackHartmannData:
         self.cxy = cxy
         self.cyy = cyy
 
-        # Optional attributes.
+        # Optional and extra. attributes.
+        self.options = options
         for (key, val) in kwds.items():
             setattr(self, key, val)
 
@@ -636,6 +638,22 @@ def detect_grid_of_spots(img, *,
             x = xoff + j*step
             plt.plot([x, x], [ymin, ymax], color=gridcolor, linewidth=gridlinewidth)
 
+    # Algorithm settings.
+    options = {
+        'spot_fwhm': float(spot_fwhm),
+        'spot_footprint': spot_footprint,
+        'robust_to_background': robust_to_background,
+        'background_level': background_level,
+        'detect_radius': detect_radius,
+        'detect_level': detect_level,
+        'grid_step': round((grid_step_min + grid_step_max)/2, 7),
+        'grid_rtol': round((grid_step_max - grid_step_min)/(2*grid_step), 7)}
+    if grid_shape is not None:
+        options['grid_nrows'] = grid_shape[0]
+        options['grid_ncols'] = grid_shape[1]
+    options['distance_atol'] = distance_atol
+    options['distance_rtol'] = distance_rtol
+
     # If not centroiding, return the grid model.
     if not centroiding:
         cond = grid_z <= detect_level
@@ -644,7 +662,8 @@ def detect_grid_of_spots(img, *,
             grid_y[cond] = NaN
             grid_z[cond] = NaN
         return ShackHartmannGrid(x=grid_x, y=grid_y, z=grid_z,
-                                 step=step, origin=(xoff,yoff))
+                                 step=step, origin=(xoff,yoff),
+                                 options=options)
 
     # Compute the center of gravity of all valid spots.
     cond = grid_z > detect_level
@@ -692,8 +711,11 @@ def detect_grid_of_spots(img, *,
                  markersize=centroidmarkersize,
                  markeredgecolor=centroidmarkercolor)
 
+    options['centroid_radius'] = centroid_radius
+    options['centroid_threshold'] = float(centroid_threshold)
     return ShackHartmannData(i=cog_i, j=cog_j, x=cog_x, y=cog_y, z=cog_z,
-                             cxx=cog_cxx, cxy=cog_cxy, cyy=cog_cyy)
+                             cxx=cog_cxx, cxy=cog_cxy, cyy=cog_cyy,
+                             options=options)
 
 class ShackHartmannWeighting:
     """Shack-Hartmann weighting operator.
