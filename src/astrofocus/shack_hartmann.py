@@ -8,6 +8,9 @@ import scipy
 import matplotlib.pyplot as plt
 import numpy as np
 
+from astropy.io import fits
+
+from .fits import add_commentary
 from .centroids import center_of_gravity
 from .metrics import ChamferDistanceToGrid
 from .filters import gaussian_2d_filter, cubic_bspline_2d_filter, ball_2d_window
@@ -78,9 +81,12 @@ class ShackHartmannGrid:
 class ShackHartmannData:
     """Shack-Hartmann data.
 
-    The object is created given Shack-Hartmann data.
+    An instance is created given Shack-Hartmann data by:
 
-    Mandatory attributes (n is the number of measured slopes):
+    ``ShackHartmannData(i=..., j=..., x=..., y=..., ...)``
+
+    where mandatory keywords correspond to attributes (n is the number of
+    measured slopes):
 
     - `.i`: n-vector of row indices in WFS grid.
     - `.j`: n-vector of column indices in WFS grid.
@@ -95,6 +101,14 @@ class ShackHartmannData:
     image of the wavefront sensor. The row index `i` runs along the direction
     of `y`, while the column index `j` runs along the direction of `x`.
     Coordinates `x` and `y` are in pixels.
+
+    Keyword `options` is a dictionary with the settings of the algorithm used
+    to extract the data.
+
+    Other specified keywords are memorized by the object.
+
+    Another possibility is to call ``ShackHartmannData.readfrom(filename)`` to
+    read the Shack-Hartmann data from a FITS file.
 
     """
     def __init__(self, *, i, j, x, y, z, cxx, cxy, cyy, options={}, **kwds):
@@ -116,6 +130,78 @@ class ShackHartmannData:
     def cost(self):
         """Return the cost function associated with the data."""
         return ShackHartmannDataCost(self)
+
+    def writeto(self, filename, *, overwrite=False, comment=None, history=None):
+        """Write data to a FITS as a binary table."""
+        hdr = fits.Header()
+        hdr['EXTNAME'] = 'SHACK_HARTMANN_DATA'
+        hdr['EXTVER'] = 1
+        for (key, val) in self.options.items():
+            hdr[f'HIERARCH {key.upper()}'] = val
+        if history is not None:
+            add_commentary(hdr, 'HISTORY', history)
+        if comment is not None:
+            add_commentary(hdr, 'COMMENT', comment)
+        hdu = fits.BinTableHDU.from_columns(
+            [fits.Column(name='i', format='I', array=self.i),
+             fits.Column(name='j', format='I', array=self.j),
+             fits.Column(name='x', format='E', array=self.x),
+             fits.Column(name='y', format='E', array=self.y),
+             fits.Column(name='z', format='E', array=self.z),
+             fits.Column(name='cxx', format='E', array=self.cxx),
+             fits.Column(name='cxy', format='E', array=self.cxy),
+             fits.Column(name='cyy', format='E', array=self.cyy)],
+            header=hdr)
+        hdu.writeto(filename, overwrite=overwrite)
+
+    @staticmethod
+    def readfrom(filename):
+        """Read Shack-Hartmann data from a FITS file.
+
+        Prior content of `self`, if any, is replaced by the data read in
+        `filename`.
+
+        """
+        with fits.open(filename) as hdulist:
+            for hdu in hdulist:
+                # Continue until extension is found.
+                hdr = hdu.header
+                if 'EXTNAME' not in hdr or hdr['EXTNAME'] != 'SHACK_HARTMANN_DATA':
+                    continue
+                if 'EXTVER' not in hdr or hdr['EXTVER'] != 1:
+                    continue
+
+                # Read columns.
+                data = hdu.data
+                i = data.field('i').astype(int)
+                j = data.field('j').astype(int)
+                x = data.field('x')
+                y = data.field('y')
+                z = data.field('z')
+                cxx = data.field('cxx')
+                cxy = data.field('cxx')
+                cyy = data.field('cxx')
+
+                # Extract options.
+                options = {}
+                for (key, val) in hdr.items():
+                    # NOTE HIERARCH prefix is hidden by API otherwise we could
+                    # have done:
+                    #
+                    #     m = re.match('^HIERARCH +(.*?) *$', key)
+                    #     if m is None:
+                    #        continue
+                    #     options[m.group(1).lower] = val
+                    #
+                    # Instead we use the trick that all options are longer than
+                    # 8 characters and have an underscore.
+                    if len(key) > 8:
+                        options[key.lower()] = val
+
+                return ShackHartmannData(i=i, j=j, x=x, y=y, z=z, cxx=cxx,
+                                         cxy=cxy, cyy=cyy, options=options)
+
+        raise Exception('EXTNAME="SHACK_HARTMANN_DATA" not found in FITS file')
 
 # TODO add fitting the spot FWHM
 #
