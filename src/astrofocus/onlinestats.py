@@ -27,6 +27,19 @@ class SampleStatistics:
         if filename is not None:
             self.readfrom(filename)
 
+    def __repr__(self):
+        cnt = self._cnt
+        if np.isscalar(cnt):
+            nobs = cnt
+        else:
+            nobs = np.asarray(cnt).max()
+        descr = f'SimpleStatistics with {nobs} observation(s)'
+        avg = self._avg
+        if not np.isscalar(avg):
+            shape = np.asarray(avg).shape
+            descr += f' of shape {shape}'
+        return descr
+
     def __copy__(self):
         other = SampleStatistics()
         other._cnt = copy.copy(self._cnt)
