@@ -773,7 +773,9 @@ def detect_grid_of_spots(img, *,
     # Compute the center of gravity of all valid spots.
     cond = grid_z > detect_level
     n = np.count_nonzero(cond)
-    grid_i, grid_j = np.meshgrid(range(nrows), range(ncols), indexing='ij')
+    grid_i, grid_j = np.meshgrid(range(cond.shape[0]),
+                                 range(cond.shape[1]),
+                                 indexing='ij', sparse=False)
     cog_i = grid_i[cond]
     cog_j = grid_j[cond]
     cog_x = grid_x[cond].astype(float)
