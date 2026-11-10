@@ -25,9 +25,9 @@ class ImageROI(object):
     out of `ymin`, `ymax`, `ycen`, or `height`.
 
     If a range is specified by its center `c` and its size `s` (`xcen` and
-    `width` or `ycen` and `height`), the range of interest will have a length
-    `n = round(s)` and will start at `i = round(c - (n - 1)/2)` and stop at `j
-    = i + n - 1` (inclusive).
+    `width` or `ycen` and `height`), the resulting range has a length `n =
+    round(s)`, starts at `i = round(c - (n - 1)/2)`, and stops at `j = i + n -
+    1` (inclusive).
 
     In other cases, parameter `xcen` and `ycen`, if specified, are rounded to
     the nearest half-integer, while other parameters are rounded to the nearest
@@ -55,13 +55,12 @@ class ImageROI(object):
     def __eq__(self, other):
         if other is self:
             return True
-        elif not isinstance(other, ImageROI):
+        if not isinstance(other, ImageROI):
             return False
-        elif self.is_empty():
+        if self.is_empty():
             return other.is_empty()
-        else:
-            return (other._beg1 == self._beg1 and other._end1 == self._end1 and
-                    other._beg2 == self._beg2 and other._end2 == self._end2)
+        return (other._beg1 == self._beg1 and other._end1 == self._end1 and
+                other._beg2 == self._beg2 and other._end2 == self._end2)
 
     def __call__(self, img):
         return self.get(img)
@@ -281,11 +280,11 @@ def _parse_range(name, rmin, rmax, rcen, rlen):
         rmin = round(rcen - (rlen - 1)/2)
         rend = rmin + rlen
     if rend is None:
-        raise Exception("bad set of keywords for the `{}` range".format(name))
+        raise ValueError(f'bad set of keywords for the `{name}` range')
     if rmin < rend:
         return rmin, rend
-    else:
-        return 0, 0
+    # Return empty range.
+    return 0, 0
 
 def _intersect(a_beg, a_end, b_beg, b_end):
     c_beg = max(a_beg, b_beg)
