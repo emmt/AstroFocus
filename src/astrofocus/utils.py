@@ -192,6 +192,16 @@ def vector_like_length(x):
         return len(x)
     return -1
 
+def eltype(x):
+    """Return the element-type of `x` seen as an array."""
+    if isinstance(x, np.ndarray):
+        return x.dtype.type
+    if isinstance(x, (int, float, complex)):
+        return type(x)
+    if isinstance(x, (tuple, list)):
+        return np.asarray(x).dtype.type
+    raise TypeError('expecting a numerical scalar or array-like argument')
+
 def scaled_range(n, scale=1):
     """Return a vector whose entry at index `i` is ``i*scale``."""
     r = np.array(range(n))
