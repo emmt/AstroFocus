@@ -540,7 +540,7 @@ stat.writeto('data/bias-stat.fits.gz')
 and, later, recover the sample statistics by:
 
 ```python
-stat = focus.SampleStatistics('data/bias-stat.fits.gz')
+stat = focus.SampleStatistics.readfrom('data/bias-stat.fits.gz')
 ```
 ]
 
@@ -926,7 +926,7 @@ stat.var(corrected=True)                # get unbiased variance estimator
 stat.std()                              # get sample standard deviation
 stat.std(corrected=True)                # get square root of unbiased variance
 stat.writeto(filename)                  # save statistics to FITS file
-stat = focus.SampleStatistics(filename) # read statistics from FITS file
+stat = focus.SampleStatistics.readfrom(filename) # read statistics from FITS file
 
 # Example
 from glob import glob

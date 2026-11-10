@@ -13,19 +13,15 @@ class SampleStatistics:
     ``stat = SampleStatistics()``
 
     Return an empty object which may updated by providing independent data
-    samples as they become available with: ``stat.update(data, mask=None)``.
+    samples as they become available with:
 
-    ``stat = SimpleStatistics(filename)``
-
-    Return an object with content read from file `filename`.
+    ``stat.update(data, mask=None)``.
 
     """
-    def __init__(self, filename=None):
+    def __init__(self):
         self._cnt = 0
         self._avg = 0
         self._var = 0
-        if filename is not None:
-            self.readfrom(filename)
 
     def __repr__(self):
         cnt = self._cnt
@@ -173,39 +169,39 @@ class SampleStatistics:
         hdu.writeto(filename, overwrite=overwrite)
         return None
 
-    def readfrom(self, filename):
-        """Read sample statistics from a FITS file.
-
-        Prior content of `self`, if any, is replaced by the statistics read
-        from `filename`.
-
-        """
-        found = False
+    @staticmethod
+    def readfrom(filename):
+        """Read sample statistics from a FITS file."""
         with fits.open(filename) as hdus:
             for hdu in hdus:
                 hdr = hdu.header
-                if 'HDUNAME' not in hdr or hdr['HDUNAME'] != 'SAMPLE_STATISTICS':
+                if 'EXTNAME' in hdr:
+                    extname = hdr['EXTNAME']
+                elif 'HDUNAME' in hdr:
+                    extname = hdr['HDUNAME']
+                else:
+                    extname = None
+                if extname != 'SAMPLE_STATISTICS':
                     continue
                 data = hdu.data
                 shape = data.shape
+                stat = SampleStatistics()
                 if 'NOBS' not in hdr:
                     # Non-uniform number of observations.
                     if shape[0] != 3:
                         raise Exception('Expecting NAXIS1=3, got NAXIS1={0}'.format(shape[-1]))
                     cnt = data[0,...].astype('int')
                     cnt0 = cnt.ravel()[0]
-                    self._cnt = (cnt == cnt0).all() and cnt0 or cnt
+                    stat._cnt = (cnt == cnt0).all() and cnt0 or cnt
                     offset = 1
                 else:
                     # Uniform number of observations.
                     if shape[0] != 2:
                         raise Exception('Expecting NAXIS1=2, got NAXIS1={0}'.format(shape[-1]))
-                    self._cnt = int(hdr['NOBS'])
+                    stat._cnt = int(hdr['NOBS'])
                     offset = 0
-                self._avg = data[offset + 0,...]
-                self._var = data[offset + 1,...]
-                found = True
-                break
-        if not found:
-            raise Exception('HDUNAME="SAMPLE_STATISTICS" not found in FITS file')
-        return None
+                stat._avg = data[offset + 0,...]
+                stat._var = data[offset + 1,...]
+                return stat
+
+        raise Exception('"SAMPLE_STATISTICS" extension not found in FITS file')
