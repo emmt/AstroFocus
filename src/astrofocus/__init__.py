@@ -37,4 +37,6 @@ from .shack_hartmann import ShackHartmannDataCost
 
 from numpy import conj
 
+from .zernike import zernike_polynomials
+
 #from numpy.random import random_sample, standard_normal
