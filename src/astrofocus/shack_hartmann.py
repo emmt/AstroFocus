@@ -800,8 +800,8 @@ def detect_grid_of_spots(img, *,
 
         # Compute the center of gravity in the ROI and register it.
         dx, dy, cxx, cxy, cyy = center_of_gravity(roi_z, roi_x, roi_y, covariance=True)
-        cog_x[k] = x + dx
-        cog_y[k] = y + dy
+        cog_x[k] = (x - (xoff + cog_j[k]*step)) + dx
+        cog_y[k] = (y - (yoff + cog_i[k]*step)) + dy
         cog_cxx[k] = cxx
         cog_cxy[k] = cxy
         cog_cyy[k] = cyy
