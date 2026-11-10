@@ -26,7 +26,7 @@ class ShackHartmannGrid:
 
     - `.step` the spacing oth grid nodes (in pixels).
 
-    - `.origin` the coordinates of the first grid node (in pixels).
+    - `.xoff` and `.yoff` the coordinates of the first grid node (in pixels).
 
     - `.x`, `.y`, and `.z`, each a 2-dimensional array of the shape of the
       grid: ``.x[i,j]``, ``.y[i,j]``, and ``.z[i,j]`` are the coordinates and
@@ -39,7 +39,7 @@ class ShackHartmannGrid:
     pixels.
 
     """
-    def __init__(self, *, x, y, z, step, origin, options={}, **kwds):
+    def __init__(self, *, x, y, z, step, xoff, yoff, options={}, **kwds):
         # Check and set mandatory attributes.
         x = np.asarray(x)
         shape = x.shape
@@ -54,7 +54,8 @@ class ShackHartmannGrid:
         self.z = z
         self.shape = shape
         self.step = step
-        self.origin = origin
+        self.xoff = xoff
+        self.yoff = yoff
 
         # Optional and extra. attributes.
         self.options = options
@@ -63,11 +64,12 @@ class ShackHartmannGrid:
 
     def __repr__(self):
         fix = lambda x: round(x, 3)
-        xorg, yorg = map(fix, self.origin)
+        xoff = fix(self.xoff)
+        yoff = fix(self.yoff)
         step = fix(self.step)
         nrows, ncols = self.shape
         n = self.count_number_of_valid_nodes()
-        return (f'ShackHartmannGrid(step={step}, origin=({xorg}, {yorg}), ...)\n' +
+        return (f'ShackHartmannGrid(step={step}, xoff={xoff}, yoff={yoff}, ...)\n' +
                 f'with {nrows} row(s), {ncols} column(s), and {n} valid nodes')
 
     def mask_of_valid_nodes(self):
@@ -136,6 +138,14 @@ class ShackHartmannData:
         hdr = fits.Header()
         hdr['EXTNAME'] = 'SHACK_HARTMANN_DATA'
         hdr['EXTVER'] = 1
+        step = getattr(self, 'step', None)
+        if step is not None:
+            hdr['STEP'] = (step, '[pixels] Estimated grid step')
+        xoff = getattr(self, 'xoff', None)
+        yoff = getattr(self, 'yoff', None)
+        if xoff is not None and yoff is not None:
+            hdr['XOFF'] = (xoff, '[pixels] Estimated grid x-offset')
+            hdr['YOFF'] = (yoff, '[pixels] Estimated grid y-offset')
         for (key, val) in self.options.items():
             hdr[f'HIERARCH {key.upper()}'] = val
         if history is not None:
@@ -198,13 +208,22 @@ class ShackHartmannData:
                     if len(key) > 8:
                         options[key.lower()] = val
 
-                return ShackHartmannData(i=i, j=j, x=x, y=y, z=z, cxx=cxx,
+                # Instantiate object.
+                data = ShackHartmannData(i=i, j=j, x=x, y=y, z=z, cxx=cxx,
                                          cxy=cxy, cyy=cyy, options=options)
+
+                # Extract optional grid parameters.
+                if 'STEP' in hdr:
+                    data.step = hdr['STEP']
+                if 'XOFF' in hdr and 'YOFF' in hdr:
+                    data.xoff = hdr['XOFF']
+                    data.yoff = hdr['YOFF']
+
+                return data
 
         raise Exception('EXTNAME="SHACK_HARTMANN_DATA" not found in FITS file')
 
 # TODO add fitting the spot FWHM
-#
 # NOTE Markers can be UTF8 symbol like '$\u20DD$',  '$\u20DE$' '$\u20DF$'.
 
 def detect_grid_of_spots(img, *,
@@ -748,7 +767,7 @@ def detect_grid_of_spots(img, *,
             grid_y[cond] = NaN
             grid_z[cond] = NaN
         return ShackHartmannGrid(x=grid_x, y=grid_y, z=grid_z,
-                                 step=step, origin=(xoff,yoff),
+                                 step=step, xoff=xoff, yoff=yoff,
                                  options=options)
 
     # Compute the center of gravity of all valid spots.
@@ -801,6 +820,7 @@ def detect_grid_of_spots(img, *,
     options['centroid_threshold'] = float(centroid_threshold)
     return ShackHartmannData(i=cog_i, j=cog_j, x=cog_x, y=cog_y, z=cog_z,
                              cxx=cog_cxx, cxy=cog_cxy, cyy=cog_cyy,
+                             step=step, xoff=xoff, yoff=yoff,
                              options=options)
 
 class ShackHartmannWeighting:
