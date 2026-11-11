@@ -6,7 +6,7 @@ import math
 import numpy as np
 
 def zernike_count(n):
-    """Return the number of Zernike polynomials of radial index ``≤ n``."""
+    """Return the number of Zernike polynomials of radial order ``≤ n``."""
     if not isinstance(n, int):
         n = math.floor(n)
     if n < 0:
@@ -14,8 +14,8 @@ def zernike_count(n):
     return (n + 1)*(n + 2)//2
 
 def zernike_index(m, n):
-    """Return the 0-based index of the Zernike polynomial ``Z[m,n]``
-       in the list of Zernike polynomials."""
+    """Return the 0-based index of the Zernike polynomial ``Z[m,n]`` in the
+       list of Zernike polynomials returned by `zernike_polynomials`."""
     if not isinstance(m, int):
         raise TypeError('`m` must be integer')
     if not isinstance(n, int):
@@ -38,7 +38,7 @@ def zernike_radial_index(m, n):
 def _radial_index(m, n):
     """Return the 0-based index of Zernike radial polynomial ``R[m,n]``.
 
-    This private function assumes arguments are valid. """
+    This private function assumes arguments are valid."""
 
     # Azimuthal modes are stored in decreasing azimuthal order for each radial
     # order and there are ``1 + n + (n*n)//4`` number of radial modes of degree
@@ -46,8 +46,8 @@ def _radial_index(m, n):
     return n + (n*n)//4 - abs(m)//2
 
 
-def zernike_polynonials(x, y, nmax):
-    """Return a list of all Zernike polynonial of degree ``n ≤ nmax`` for
+def zernike_polynomials(x, y, nmax):
+    """Return a list of all Zernike polynomial of degree ``n ≤ nmax`` for
     Cartesian coordinates ``(x,y)``."""
 
     # Check arguments.
